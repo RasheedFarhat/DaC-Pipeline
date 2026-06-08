@@ -1,0 +1,11 @@
+<group name="windows,sysmon,">
+  <rule id="100005" level="12">
+    <decoded_as>json</decoded_as>
+    <field name="win.eventdata.image" type="pcre2">(?i)wmic\\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)os get \\/format:</field>
+    <description>Suspicious WMIC XSL Script Execution (MITRE T1220).</description>
+    <mitre>
+      <id>T1220</id>
+    </mitre>
+  </rule>
+</group>
