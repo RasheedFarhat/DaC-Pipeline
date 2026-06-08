@@ -4,13 +4,18 @@ import urllib3
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# API connection details
-API_URL = "https://127.0.0.1:55000"
-USER = "wazuh-wui"
-PASSWORD = "MyS3cr37P450r.*-"
-RULES_DIR = "rules/wazuh" # We will create this subfolder next
+# Pull credentials dynamically from the environment
+API_URL = os.environ.get("WAZUH_API_URL", "https://127.0.0.1:55000")
+USER = os.environ.get("WAZUH_USER")
+PASSWORD = os.environ.get("WAZUH_PASSWORD")
+RULES_DIR = "rules/wazuh"
 
 def main():
+    # Fail fast if credentials are not found
+    if not USER or not PASSWORD:
+        print("[-] FATAL: WAZUH_USER and WAZUH_PASSWORD environment variables must be set.")
+        return
+
     print("[*] 1. Authenticating to the Wazuh API...")
     try:
         auth_response = requests.post(f"{API_URL}/security/user/authenticate", auth=(USER, PASSWORD), verify=False)
