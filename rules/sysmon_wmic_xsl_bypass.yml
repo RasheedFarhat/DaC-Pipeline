@@ -1,0 +1,20 @@
+title: Suspicious WMIC XSL Script Execution
+id: a56a6427-0c71-464a-89a5-71cb6353d712
+status: experimental
+description: Detects WMIC executing a local or remote XSL file, a common AppLocker bypass mechanism (MITRE T1220).
+author: Rasheed Farhat
+date: 2026-06-08
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection:
+        Image|endswith: '\wmic.exe'
+        CommandLine|contains|all:
+            - 'os'
+            - 'get'
+            - '/format:'
+    condition: selection
+falsepositives:
+    - Highly customized legacy administrative scripts.
+level: high

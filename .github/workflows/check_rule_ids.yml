@@ -1,0 +1,30 @@
+name: Rule ID Validation Pipeline
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'rules/**.yml'
+      - 'rules/**.yaml'
+
+jobs:
+  validate-ids:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python Environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml
+
+      - name: Execute ID Collision Check
+        run: python scripts/check_rule_ids.py
