@@ -8,13 +8,22 @@ logsource:
     category: process_creation
     product: windows
 detection:
-    selection:
+    selection_process:
         Image|endswith: '\wmic.exe'
         CommandLine|contains|all:
             - 'os'
             - 'get'
+        CommandLine|contains:
             - '/format:'
-    condition: selection
+            - '/FORMAT:'
+            - '/Format:'
+    selection_payload:
+        CommandLine|contains:
+            - '.xsl'
+            - 'http://'
+            - 'https://'
+            - '\\'
+    condition: selection_process and selection_payload
 falsepositives:
     - Highly customized legacy administrative scripts.
 level: high
