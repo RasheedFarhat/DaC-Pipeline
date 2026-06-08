@@ -5,5 +5,5 @@ idna
 charset-normalizer
 PyYAML
 pysigma==1.3.3
-pysigma-pipeline-sysmon==1.0.4
+pysigma-pipeline-sysmon==2.0.0
 pysigma-backend-elasticsearch
