@@ -13,3 +13,6 @@ requests==2.34.2
 types-PyYAML==6.0.12.20260518
 typing_extensions==4.15.0
 urllib3==2.7.0
+pysigma
+pysigma-backend-elasticsearch
+pysigma-pipeline-sysmon
