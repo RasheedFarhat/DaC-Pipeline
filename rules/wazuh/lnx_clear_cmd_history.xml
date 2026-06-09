@@ -1,0 +1,10 @@
+<group name="linux, syscheck, mitre_t1070.003,">
+  <rule id="100010" level="10">
+    <if_sid>550</if_sid>
+    <match>.bash_history</match>
+    <description>Defense Evasion: Command history file (.bash_history) was modified or cleared.</description>
+    <mitre>
+      <id>T1070.003</id>
+    </mitre>
+  </rule>
+</group>
