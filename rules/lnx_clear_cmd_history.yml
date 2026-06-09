@@ -1,0 +1,15 @@
+title: Linux Command History Cleared
+id: e069b008-0114-41d6-84d4-4efb60fc14c0
+status: experimental
+description: Detects the modification or clearing of the .bash_history file.
+logsource:
+    product: linux
+    service: syscheck
+detection:
+    selection:
+        file|endswith: '.bash_history'
+    condition: selection
+level: high
+tags:
+    - attack.defense_evasion
+    - attack.t1070.003
