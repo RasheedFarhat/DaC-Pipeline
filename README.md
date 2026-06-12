@@ -1,6 +1,9 @@
 # Detection-as-Code (DaC) CI/CD Pipeline
 
 ## Overview
+
+![Detection-as-Code Architecture Pipeline](./assets/MechanismFlowChart.png)
+
 This repository houses a fully automated Detection-as-Code pipeline. It transitions SIEM rule management from a manual, UI-driven process into a version-controlled, automated, and tested engineering workflow.
 
 By leveraging GitHub Actions and Python-based API integrations, this architecture ensures that all behavioral threat detections (Sigma/XML) are validated for syntax and logic errors before being programmatically deployed to a production Wazuh SIEM environment.
