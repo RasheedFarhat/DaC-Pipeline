@@ -6,96 +6,88 @@ from collections import Counter
 
 RULES_DIR = "rules"
 
-def check_sigma_yaml(directory):
-    """Parses YAML files and checks for duplicate Sigma UUIDs."""
-    yaml_files = []
+def validate_pipeline(directory):
+    sigma_files = []
+    xml_files = []
+
+    # 1. Categorize all rule files
     for root, _, files in os.walk(directory):
         for file in files:
-            if file.endswith('.yml') or file.endswith('.yaml'):
-                yaml_files.append(os.path.join(root, file))
+            if file.endswith(('.yml', '.yaml')):
+                sigma_files.append(os.path.join(root, file))
+            elif file.endswith('.xml'):
+                xml_files.append(os.path.join(root, file))
 
-    rule_ids = []
     errors = []
     
-    for file in yaml_files:
+    # 2. Parse Sigma & Collect Source of Truth UUIDs
+    sigma_uuids = {} # map: UUID -> filepath
+    for file in sigma_files:
         try:
             with open(file, 'r') as f:
-                rule_data = yaml.safe_load(f)
-                if rule_data and 'id' in rule_data:
-                    rule_ids.append((rule_data['id'], file))
+                data = yaml.safe_load(f)
+                if data and 'id' in data:
+                    rule_id = data['id']
+                    if rule_id in sigma_uuids:
+                        errors.append(f"[!] Duplicate Sigma UUID: {rule_id} found in {file} and {sigma_uuids[rule_id]}")
+                    else:
+                        sigma_uuids[rule_id] = file
         except Exception as e:
             errors.append(f"[!] Error parsing YAML {file}: {e}")
 
-    return check_duplicates(rule_ids, "Sigma UUID", errors)
-
-def check_wazuh_xml(directory):
-    """Parses XML files, checks for duplicate Wazuh IDs, and enforces range limits."""
-    xml_files = []
-    for root, _, files in os.walk(directory):
-        for file in files:
-            if file.endswith('.xml'):
-                xml_files.append(os.path.join(root, file))
-
-    rule_ids = []
-    errors = []
-
+    # 3. Parse XML, Validate Boundaries, & Enforce Correspondence
+    xml_ids = []
     for file in xml_files:
         try:
             tree = ET.parse(file)
-            xml_root = tree.getroot()
-            
-            # Find every <rule> tag in the XML file
-            for rule in xml_root.findall('.//rule'):
+            for rule in tree.getroot().findall('.//rule'):
                 rule_id = rule.get('id')
+                
+                # A. Integer & Range Validation
                 if rule_id:
                     try:
                         rule_id_int = int(rule_id)
-                        rule_ids.append((rule_id_int, file))
-                        
-                        # Wazuh Custom Rule Boundary Check
+                        xml_ids.append((rule_id_int, file))
                         if rule_id_int < 100000:
-                            errors.append(f"[!] Reserved ID Violation: ID {rule_id_int} in {file}. Custom rules must be >= 100000.")
+                            errors.append(f"[!] Reserved ID Violation: Rule {rule_id_int} in {file}. Custom rules must be >= 100000.")
                     except ValueError:
-                        errors.append(f"[!] Invalid ID Format: '{rule_id}' in {file} is not an integer.")
+                        errors.append(f"[!] Invalid ID Format: Rule '{rule_id}' in {file} is not an integer.")
+                
+                # B. Strict UUID Correspondence Validation
+                sigma_ref = rule.find(".//info[@type='sigma_uuid']")
+                if sigma_ref is None or not sigma_ref.text:
+                    errors.append(f"[!] Orphaned XML (Omission): {file} (Rule {rule_id}) declares no Sigma parent (missing <info type='sigma_uuid'>).")
+                elif sigma_ref.text not in sigma_uuids:
+                    errors.append(f"[!] Dangling Reference: {file} (Rule {rule_id}) points to Sigma UUID '{sigma_ref.text}', which does not exist in the YAML source.")
+                    
         except ET.ParseError as e:
             errors.append(f"[!] XML Parse Error in {file}: {e}")
 
-    return check_duplicates(rule_ids, "Wazuh XML ID", errors)
-
-def check_duplicates(extracted_data, id_type, errors):
-    """Helper function to count IDs and append duplicate errors."""
-    just_ids = [data[0] for data in extracted_data]
-    id_counts = Counter(just_ids)
-    
+    # 4. Check for duplicate Wazuh XML IDs
+    id_counts = Counter([data[0] for data in xml_ids])
     duplicates = {id: count for id, count in id_counts.items() if count > 1}
-    
     for dup_id in duplicates:
-        # Find all files that share this duplicate ID
-        shared_files = [file_path for rule_id, file_path in extracted_data if rule_id == dup_id]
-        errors.append(f"[!] Duplicate {id_type} detected: {dup_id}\n    Shared by: {', '.join(shared_files)}")
-        
+        shared_files = [file_path for rule_id, file_path in xml_ids if rule_id == dup_id]
+        errors.append(f"[!] Duplicate Wazuh XML ID detected: {dup_id}\n    Shared by: {', '.join(shared_files)}")
+
     return errors
 
 def main():
-    print(f"[*] Scanning directory: {RULES_DIR} for rule conflicts...\n")
+    print(f"[*] Starting Strict Validation & Correspondence Check in '{RULES_DIR}'...\n")
     
     if not os.path.exists(RULES_DIR):
         print(f"[-] Directory '{RULES_DIR}' not found. Exiting.")
         sys.exit(0)
 
-    # Run both checks
-    yaml_errors = check_sigma_yaml(RULES_DIR)
-    xml_errors = check_wazuh_xml(RULES_DIR)
+    errors = validate_pipeline(RULES_DIR)
     
-    all_errors = yaml_errors + xml_errors
-
-    if all_errors:
-        print("[-] CI/CD Pipeline halted. Rule validation failed with the following errors:\n")
-        for error in all_errors:
+    if errors:
+        print("[-] CI/CD Pipeline halted. Validation failed with the following errors:\n")
+        for error in errors:
             print(error)
         sys.exit(1)
     else:
-        print("[+] PASSED: All Sigma UUIDs and Wazuh XML IDs are unique and valid.")
+        print("[+] PASSED: All rules are valid, unique, and strictly linked via UUID.")
         sys.exit(0)
 
 if __name__ == "__main__":
