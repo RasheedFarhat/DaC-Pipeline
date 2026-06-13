@@ -1,5 +1,6 @@
 <group name="windows,sysmon,">
   <rule id="100005" level="12">
+    <info type="sigma_uuid">a56a6427-0c71-464a-89a5-71cb6353d712</info>
     <decoded_as>json</decoded_as>
     <field name="win.eventdata.image" type="pcre2">(?i)wmic\\.exe$</field>
     <field name="win.eventdata.commandLine" type="pcre2">(?i)os get \\/format:</field>
