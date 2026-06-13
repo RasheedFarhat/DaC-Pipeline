@@ -1,62 +1,101 @@
 import os
 import sys
 import yaml
+import xml.etree.ElementTree as ET
 from collections import Counter
 
-# Define the path to your Sigma rules directory
 RULES_DIR = "rules"
 
-def get_yaml_files(directory):
-    """Recursively find all .yml files in the given directory."""
+def check_sigma_yaml(directory):
+    """Parses YAML files and checks for duplicate Sigma UUIDs."""
     yaml_files = []
     for root, _, files in os.walk(directory):
         for file in files:
             if file.endswith('.yml') or file.endswith('.yaml'):
                 yaml_files.append(os.path.join(root, file))
-    return yaml_files
 
-def extract_rule_ids(files):
-    """Parse YAML files and extract the 'id' field."""
     rule_ids = []
-    for file in files:
+    errors = []
+    
+    for file in yaml_files:
         try:
             with open(file, 'r') as f:
-                # Safe load to prevent arbitrary code execution
                 rule_data = yaml.safe_load(f)
                 if rule_data and 'id' in rule_data:
                     rule_ids.append((rule_data['id'], file))
         except Exception as e:
-            print(f"Error parsing {file}: {e}")
-    return rule_ids
+            errors.append(f"[!] Error parsing YAML {file}: {e}")
 
-def main():
-    print(f"Scanning directory: {RULES_DIR} for Sigma rules...")
-    files = get_yaml_files(RULES_DIR)
-    
-    if not files:
-        print("No rule files found. Pipeline passes.")
-        sys.exit(0)
+    return check_duplicates(rule_ids, "Sigma UUID", errors)
 
-    extracted_data = extract_rule_ids(files)
-    
-    # Isolate just the IDs for counting
+def check_wazuh_xml(directory):
+    """Parses XML files, checks for duplicate Wazuh IDs, and enforces range limits."""
+    xml_files = []
+    for root, _, files in os.walk(directory):
+        for file in files:
+            if file.endswith('.xml'):
+                xml_files.append(os.path.join(root, file))
+
+    rule_ids = []
+    errors = []
+
+    for file in xml_files:
+        try:
+            tree = ET.parse(file)
+            xml_root = tree.getroot()
+            
+            # Find every <rule> tag in the XML file
+            for rule in xml_root.findall('.//rule'):
+                rule_id = rule.get('id')
+                if rule_id:
+                    try:
+                        rule_id_int = int(rule_id)
+                        rule_ids.append((rule_id_int, file))
+                        
+                        # Wazuh Custom Rule Boundary Check
+                        if rule_id_int < 100000:
+                            errors.append(f"[!] Reserved ID Violation: ID {rule_id_int} in {file}. Custom rules must be >= 100000.")
+                    except ValueError:
+                        errors.append(f"[!] Invalid ID Format: '{rule_id}' in {file} is not an integer.")
+        except ET.ParseError as e:
+            errors.append(f"[!] XML Parse Error in {file}: {e}")
+
+    return check_duplicates(rule_ids, "Wazuh XML ID", errors)
+
+def check_duplicates(extracted_data, id_type, errors):
+    """Helper function to count IDs and append duplicate errors."""
     just_ids = [data[0] for data in extracted_data]
     id_counts = Counter(just_ids)
     
-    # Filter for IDs that appear more than once
     duplicates = {id: count for id, count in id_counts.items() if count > 1}
+    
+    for dup_id in duplicates:
+        # Find all files that share this duplicate ID
+        shared_files = [file_path for rule_id, file_path in extracted_data if rule_id == dup_id]
+        errors.append(f"[!] Duplicate {id_type} detected: {dup_id}\n    Shared by: {', '.join(shared_files)}")
+        
+    return errors
 
-    if duplicates:
-        print("\n[FAILED] CI/CD Pipeline halted. Duplicate Rule IDs detected:")
-        for dup_id in duplicates:
-            print(f"\nID: {dup_id} is shared by:")
-            for rule_id, file_path in extracted_data:
-                if rule_id == dup_id:
-                    print(f"  - {file_path}")
-        # Exit with error code 1 to fail the GitHub Action
+def main():
+    print(f"[*] Scanning directory: {RULES_DIR} for rule conflicts...\n")
+    
+    if not os.path.exists(RULES_DIR):
+        print(f"[-] Directory '{RULES_DIR}' not found. Exiting.")
+        sys.exit(0)
+
+    # Run both checks
+    yaml_errors = check_sigma_yaml(RULES_DIR)
+    xml_errors = check_wazuh_xml(RULES_DIR)
+    
+    all_errors = yaml_errors + xml_errors
+
+    if all_errors:
+        print("[-] CI/CD Pipeline halted. Rule validation failed with the following errors:\n")
+        for error in all_errors:
+            print(error)
         sys.exit(1)
     else:
-        print(f"\n[PASSED] {len(extracted_data)} rules scanned. No duplicate IDs found.")
+        print("[+] PASSED: All Sigma UUIDs and Wazuh XML IDs are unique and valid.")
         sys.exit(0)
 
 if __name__ == "__main__":
