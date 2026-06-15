@@ -1,0 +1,6 @@
+<group name="windows,sysmon,">
+  <rule id="99999" level="10">
+    <field name="win.eventdata.commandLine" type="pcre2">evil</field>
+    <description>Broken Wazuh Rule</description>
+  </rule>
+</group>
