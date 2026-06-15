@@ -53,12 +53,60 @@ def print_diff(remote_text, local_text, filename):
         elif line.startswith('@@'):
             print(f"     {line}")
 
+def reconcile_state(api_url, token, local_dir, dry_run=False):
+    """Fetches custom rules from Wazuh and deletes any that are not in the local Git repository."""
+    print("\n[*] 3. Reconciling State (Detecting and deleting orphaned rules)...")
+    
+    # Wazuh ships with this custom file by default. Ignoring it prevents accidental 
+    # deletion of pre-existing manual rules. Remove from this set if you want 100% strict Git control.
+    IGNORE_FILES = {"local_rules.xml"}
+    
+    try:
+        response = requests.get(
+            f"{api_url}/rules/files",
+            headers={'Authorization': f'Bearer {token}'},
+            params={'status': 'custom'},
+            verify=TLS_VERIFY
+        )
+        response.raise_for_status()
+        resp_json = response.json()
+        
+        remote_files = set()
+        if 'data' in resp_json and 'affected_items' in resp_json['data']:
+            for item in resp_json['data']['affected_items']:
+                if 'filename' in item and item['filename'].endswith('.xml'):
+                    remote_files.add(item['filename'])
+                    
+        local_files = {f for f in os.listdir(local_dir) if f.endswith(".xml")}
+        orphaned_files = (remote_files - local_files) - IGNORE_FILES
+        
+        if not orphaned_files:
+            print("     [+] State matches. No orphaned rules to delete.")
+            return
+
+        for filename in orphaned_files:
+            if dry_run:
+                print(f"     [DRY RUN] Would DELETE orphaned rule: {filename}")
+            else:
+                delete_resp = requests.delete(
+                    f"{api_url}/rules/files/{filename}",
+                    headers={'Authorization': f'Bearer {token}'},
+                    verify=TLS_VERIFY
+                )
+                if delete_resp.status_code == 200:
+                    print(f"     [+] Deleted orphaned rule: {filename}")
+                else:
+                    print(f"     [-] Failed to delete {filename}: {delete_resp.text}")
+                    
+    except Exception as e:
+        print(f"     [-] Error during state reconciliation: {e}")
+
 def push_agent_config(api_url, token, group_name, conf_path, dry_run=False):
     if not os.path.exists(conf_path):
         print(f"[-] Directory/File {conf_path} not found. Skipping config deployment.")
         return
 
-    print(f"[*] Deploying {conf_path} to Wazuh group: '{group_name}'...")
+    print(f"\n[*] 4. Deploying {conf_path} to Wazuh group: '{group_name}'...")
     if dry_run:
         print("     [DRY RUN] Would update agent.conf (Diffing agent.conf is unsupported via API).")
         return
@@ -172,14 +220,14 @@ def main():
                 else:
                     print(f"     [-] Failed: {upload_response.text}")
 
-    print("\n[*] 3. Deploying Centralized Configurations...")
+    reconcile_state(API_URL, token, RULES_DIR, dry_run=args.dry_run)
     push_agent_config(API_URL, token, TARGET_GROUP, CONFIG_FILE, dry_run=args.dry_run)
 
     if args.dry_run:
-        print("\n[*] 4. Skipping SIEM Restart (Dry Run Complete).")
+        print("\n[*] 6. Skipping SIEM Restart (Dry Run Complete).")
         sys.exit(0)
 
-    print("\n[*] 4. Restarting the SIEM Analysis Engine...")
+    print("\n[*] 6. Restarting the SIEM Analysis Engine...")
     restart_response = requests.put(
         f"{API_URL}/manager/restart",
         headers={'Authorization': f'Bearer {token}'},
