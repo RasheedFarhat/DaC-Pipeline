@@ -1,0 +1,9 @@
+title: Broken Sigma Rule for Testing
+id: 99999999-9999-9999-9999-999999999999
+status: experimental
+# Missing the required 'logsource' block entirely
+detection:
+    selection:
+        CommandLine|contains: "evil"
+    condition: selection OR missing_reference # Invalid condition logic
+level: high

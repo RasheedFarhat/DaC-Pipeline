@@ -1,0 +1,16 @@
+repos:
+  - repo: local
+    hooks:
+      - id: validate-sigma
+        name: Validate Sigma Syntax
+        entry: python scripts/validate_sigma.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        
+      - id: check-rule-ids
+        name: Check Rule IDs and Linkage
+        entry: python scripts/check_rule_ids.py
+        language: system
+        pass_filenames: false
+        always_run: true

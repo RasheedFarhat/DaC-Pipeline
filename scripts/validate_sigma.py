@@ -1,25 +1,22 @@
 import glob
+import os
 import sys
 from sigma.collection import SigmaCollection
 from sigma.backends.elasticsearch import LuceneBackend
 from sigma.exceptions import SigmaError
 
-def main():
-    print("[*] Starting pySigma validation...")
-    
-    # Grab all YAML files recursively
-    sigma_files = glob.glob('rules/**/*.yml', recursive=True) + \
-                  glob.glob('rules/**/*.yaml', recursive=True)
+def validate_sigma_rules(directory):
+    """Scans a directory for Sigma rules and validates their syntax."""
+    sigma_files = glob.glob(os.path.join(directory, '**', '*.yml'), recursive=True) + \
+                  glob.glob(os.path.join(directory, '**', '*.yaml'), recursive=True)
 
+    errors = []
     if not sigma_files:
-        print("[-] No Sigma rules found to validate.")
-        sys.exit(0)
+        return errors
 
-    has_errors = False
     backend = LuceneBackend()
 
     for filepath in sigma_files:
-        print(f" -> Validating {filepath}...")
         try:
             with open(filepath, 'r') as f:
                 rule_content = f.read()
@@ -27,20 +24,25 @@ def main():
             # 1. Validate against Sigma Schema
             collection = SigmaCollection.from_yaml(rule_content)
             
-            # 2. Prove it can compile to a backend (Lucene)
+            # 2. Prove it can compile to a backend
             backend.convert(collection)
-            
-            print(f"    [+] {filepath} is perfectly formatted and compilable.")
         
         except SigmaError as e:
-            print(f"    [-] pySigma Error in {filepath}: {e}")
-            has_errors = True
+            errors.append(f"pySigma Error in {filepath}: {e}")
         except Exception as e:
-            print(f"    [-] System Error processing {filepath}: {e}")
-            has_errors = True
+            errors.append(f"System Error processing {filepath}: {e}")
+            
+    return errors
 
-    if has_errors:
+def main():
+    print("[*] Starting pySigma validation...")
+    
+    errors = validate_sigma_rules('rules')
+    
+    if errors:
         print("\n[-] FATAL: Validation failed. Fix the Sigma syntax errors above.")
+        for error in errors:
+            print(f"    [-] {error}")
         sys.exit(1)
     else:
         print("\n[+] Success: All Sigma rules passed validation.")
@@ -48,4 +50,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
