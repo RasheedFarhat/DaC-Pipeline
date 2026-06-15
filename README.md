@@ -26,6 +26,7 @@ A Detection-as-Code (DaC) pipeline that manages threat detection rules as versio
 ├── .github/workflows/
 │   ├── check_rule_ids.yml      # CI: validation on pull requests
 │   └── integrate_rulesets.yml  # CD: deploy rules to Wazuh on push to main
+├── .pre-commit-config.yaml     # Local validation hooks (run on git commit)
 ├── configs/
 │   └── agent.conf              # Wazuh agent group configuration
 ├── rules/
@@ -35,6 +36,9 @@ A Detection-as-Code (DaC) pipeline that manages threat detection rules as versio
 │   ├── validate_sigma.py       # Validates Sigma syntax + compiles via pySigma
 │   ├── check_rule_ids.py       # Enforces ID rules and Sigma<->Wazuh linkage
 │   └── deploy_rule.py          # Deploys rules/config to a Wazuh manager
+├── tests/
+│   ├── fixtures/                # Deliberately broken rules for testing validators
+│   └── test_*.py                # pytest harness for validate_sigma.py / check_rule_ids.py
 └── requirements.txt
 ```
 
@@ -64,6 +68,7 @@ python3 -m venv venv
 source venv/bin/activate        # On Windows: venv\Scripts\activate
 
 pip install -r requirements.txt
+pre-commit install              # Initialize local git hooks
 ```
 
 ### 2. Validate the existing rules locally
@@ -74,9 +79,23 @@ python scripts/validate_sigma.py
 
 # Check ID conventions, duplicates, and Sigma <-> Wazuh linkage
 python scripts/check_rule_ids.py
+
+# Run the test suite to confirm the validators themselves catch known-bad rules
+pytest -v tests/
 ```
 
-Both scripts exit non-zero on failure, so they slot into any CI system — they already run automatically on every pull request via `.github/workflows/check_rule_ids.yml`.
+All three exit non-zero on failure. `validate_sigma.py` and `check_rule_ids.py` already run automatically on every pull request via `.github/workflows/check_rule_ids.yml`, and locally via pre-commit hooks (see below) before a commit is even made.
+
+### Local validation with pre-commit (recommended)
+
+To catch invalid rules before they're even committed:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+Now `validate_sigma.py` and `check_rule_ids.py` run automatically on every `git commit`, blocking the commit if either fails.
 
 ### 3. Add a new detection
 
@@ -131,6 +150,18 @@ Deployment runs automatically from `main` via `integrate_rulesets.yml`, but `dep
 | `WAZUH_API_URL` | Wazuh manager API URL, e.g. `https://wazuh.example.com:55000` |
 | `WAZUH_USER` | API user with permission to manage rules, group configs, and restart the manager |
 | `WAZUH_PASSWORD` | API password for that user |
+| `WAZUH_VERIFY_TLS` | Set to `False` to bypass certificate validation (defaults to `True`) |
+| `WAZUH_CA_BUNDLE` | Optional file path to a custom CA certificate bundle |
+
+**TLS verification is enabled by default.** For self-signed Wazuh installs, set `WAZUH_VERIFY_TLS=false` to disable verification, or — preferably — set `WAZUH_CA_BUNDLE=/path/to/ca.pem` to verify against a custom CA without disabling verification entirely.
+
+**Preview before deploying:** run with `--dry-run` to fetch the currently-deployed rules and print a diff against what would be uploaded, without modifying the SIEM:
+
+```bash
+python scripts/deploy_rule.py --dry-run
+```
+
+> Note: `--dry-run`'s remote-rule-content parsing has not yet been validated against a live Wazuh manager — if the diff output looks unexpected, this is the first place to check.
 
 **Run the deployment script manually:**
 
@@ -146,9 +177,7 @@ This will:
 - Authenticate to the Wazuh API
 - Upload every `.xml` file in `rules/wazuh/` to the manager
 - Push `configs/agent.conf` to the `default` agent group
-- Restart the manager so the new rules and configuration take effect
-
-> ⚠️ `deploy_rule.py` disables TLS certificate verification (`verify=False`) for convenience with self-signed Wazuh installs. For production, supply a proper CA bundle and remove this.
+- Restart the manager so the new rules and configuration take effect (polls for health status before exiting)
 
 **For automated deployment via GitHub Actions**, add the three variables above as repository secrets under **Settings → Secrets and variables → Actions**, then push a change to `rules/**.yml` on `main`.
 
@@ -160,17 +189,20 @@ This will:
 * **Risk Mitigation:** Eliminates manual errors causing SIEM outages.
 * **Traceability:** Every rule modification is tracked via Git commits and Pull Requests.
 * **Operational Maturity:** Infrastructure manages deployment; analysts focus on threat intelligence.
+
 ## Architectural Decisions & Known Limitations
 
 **pySigma Wazuh Compiler Limitation**
 Currently, there is no official `pysigma-backend-wazuh` package published on the Python Package Index (PyPI). To maintain pipeline integrity without relying on unstable tooling, the architecture implements the following calculated tradeoff:
 
-1. **Validation (CI):** Sigma rules are mathematically validated during the Pull Request phase using the `pysigma-backend-elasticsearch` module. This proves the YAML detection logic is sound, structurally correct, and fully compilable.
+1. **Validation (CI):** Sigma rules are validated during the Pull Request phase using the `pysigma-backend-elasticsearch` module. This proves the YAML detection logic is structurally correct and fully compilable.
 2. **Deployment (CD):** Because we cannot generate Wazuh XML on the fly via `pip` modules, the Wazuh-compatible `.xml` files are currently maintained in the `rules/wazuh/` directory. The deployment script (`deploy_rule.py`) idempotently pushes these XMLs to the Wazuh Manager via its REST API.
 
 *Future Roadmap: Once a stable pySigma Wazuh backend is officially released, the XML files will be removed from version control entirely. The CI/CD pipeline will be updated to compile the XML artifacts dynamically directly from the Sigma source immediately before deployment.*
 
+**Dry-Run Remote Diff (Unverified)**
+The `--dry-run` flag in `deploy_rule.py` fetches and parses the currently-deployed rule content from the Wazuh API to generate a diff. This parsing logic handles two possible response shapes defensively but has not yet been exercised against a live manager. If the response shape differs from both anticipated cases, the script will report all rules as "NEW FILE" rather than diffing them — this would be a silent misclassification, not an error. *Future work: validate against a live manager and add explicit error logging if the response shape doesn't match either expected case.*
 
 ## License
- 
+
 This project is licensed under the [MIT License](LICENSE).
