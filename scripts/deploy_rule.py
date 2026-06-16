@@ -58,27 +58,36 @@ def reconcile_state(api_url, token, local_dir, dry_run=False):
     print("\n[*] 3. Reconciling State (Detecting and deleting orphaned rules)...")
     
     # Wazuh ships with this custom file by default. Ignoring it prevents accidental 
-    # deletion of pre-existing manual rules. Remove from this set if you want 100% strict Git control.
+    # deletion of pre-existing manual rules.
     IGNORE_FILES = {"local_rules.xml"}
     
     try:
+        # Removed the query parameter. We fetch all files and filter locally.
         response = requests.get(
             f"{api_url}/rules/files",
             headers={'Authorization': f'Bearer {token}'},
-            params={'status': 'custom'},
             verify=TLS_VERIFY
         )
         response.raise_for_status()
         resp_json = response.json()
         
-        remote_files = set()
-        if 'data' in resp_json and 'affected_items' in resp_json['data']:
-            for item in resp_json['data']['affected_items']:
-                if 'filename' in item and item['filename'].endswith('.xml'):
-                    remote_files.add(item['filename'])
-                    
+        remote_custom_files = set()
+        
+        # Handle both legacy and current Wazuh API response structures
+        items = resp_json.get('data', {}).get('affected_items', [])
+        if not items:
+            items = resp_json.get('data', {}).get('items', [])
+            
+        for item in items:
+            path = item.get('path', '')
+            filename = item.get('filename') or item.get('file')
+            
+            # Custom rules are physically stored in the 'etc/rules' directory 
+            if filename and filename.endswith('.xml') and 'etc/rules' in path:
+                remote_custom_files.add(filename)
+                
         local_files = {f for f in os.listdir(local_dir) if f.endswith(".xml")}
-        orphaned_files = (remote_files - local_files) - IGNORE_FILES
+        orphaned_files = (remote_custom_files - local_files) - IGNORE_FILES
         
         if not orphaned_files:
             print("     [+] State matches. No orphaned rules to delete.")
