@@ -1,6 +1,6 @@
 import os
-import subprocess
 import sys
+import subprocess
 import logging
 
 # --- Logging Configuration ---
@@ -14,36 +14,33 @@ logger = logging.getLogger(__name__)
 
 SIGMA_DIR = "rules/sigma"
 
-def run_pysigma_validation():
-    logger.info("Starting pySigma validation...")
-    
-    if not os.path.exists(SIGMA_DIR):
-        logger.error(f"Directory '{SIGMA_DIR}' not found.")
-        return False
-
+def run_pysigma_validation(target_dir=SIGMA_DIR):
+    """Runs the official sigma-cli validation against a directory."""
+    logger.info(f"Starting pySigma validation on {target_dir}...")
     try:
-        result = subprocess.run(
-            ["sigma", "check", SIGMA_DIR],
-            capture_output=True,
-            text=True
-        )
-        
-        if result.returncode == 0:
-            logger.info("Validation passed. All Sigma rules are syntactically correct.")
-            return True
-        else:
-            logger.error("Validation failed. Fix the Sigma syntax errors below:")
-            # We keep standard print() here specifically to preserve the raw formatted output from the sigma-cli tool
-            print(result.stdout) 
-            print(result.stderr)
-            return False
-            
+        result = subprocess.run(['sigma', 'check', target_dir], capture_output=True, text=True)
+        if result.returncode != 0:
+            errors = result.stdout.splitlines() + result.stderr.splitlines()
+            return [e for e in errors if e.strip()]
+        return []
     except FileNotFoundError:
         logger.error("sigma-cli is not installed or not in PATH. Run 'pip install sigma-cli'")
-        return False
+        return ["[!] sigma-cli missing"]
+
+def main():
+    if not os.path.exists(SIGMA_DIR):
+        logger.error(f"Directory {SIGMA_DIR} not found. Exiting.")
+        sys.exit(0)
+        
+    errors = run_pysigma_validation()
+    if errors:
+        logger.error("CI/CD Pipeline halted. Sigma validation failed:")
+        for error in errors:
+            logger.error(error)
+        sys.exit(1)
+    else:
+        logger.info("PASSED: All Sigma rules are syntactically valid.")
+        sys.exit(0)
 
 if __name__ == "__main__":
-    success = run_pysigma_validation()
-    if not success:
-        sys.exit(1)
-    sys.exit(0)
+    main()
