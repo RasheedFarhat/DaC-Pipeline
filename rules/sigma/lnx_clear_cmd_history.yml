@@ -1,5 +1,6 @@
 title: Linux Command History Cleared
 id: e069b008-0114-41d6-84d4-4efb60fc14c0
+wazuh_id: 100010
 status: experimental
 description: Detects the modification or clearing of the .bash_history file.
 logsource:
