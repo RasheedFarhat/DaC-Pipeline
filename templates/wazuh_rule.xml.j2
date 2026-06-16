@@ -1,0 +1,20 @@
+<group name="{{ product }}, {{ service }}, custom_sigma">
+  <rule id="{{ wazuh_id }}" level="{{ wazuh_level }}">
+    <info type="sigma_uuid">{{ rule_id }}</info>
+    <if_group>{{ parent_group }}</if_group>
+    
+    {% for field, value in fields.items() %}
+    <field name="{{ field }}" type="pcre2">{{ value }}</field>
+    {% endfor %}
+    
+    <description>{{ title }}</description>
+    
+    {% if tags %}
+    <mitre>
+      {% for tag in tags %}
+      <id>{{ tag | replace('attack.', '') }}</id>
+      {% endfor %}
+    </mitre>
+    {% endif %}
+  </rule>
+</group>

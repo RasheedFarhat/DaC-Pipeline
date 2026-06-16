@@ -1,52 +1,49 @@
-import glob
 import os
+import subprocess
 import sys
-from sigma.collection import SigmaCollection
-from sigma.backends.elasticsearch import LuceneBackend
-from sigma.exceptions import SigmaError
+import logging
 
-def validate_sigma_rules(directory):
-    """Scans a directory for Sigma rules and validates their syntax."""
-    sigma_files = glob.glob(os.path.join(directory, '**', '*.yml'), recursive=True) + \
-                  glob.glob(os.path.join(directory, '**', '*.yaml'), recursive=True)
+# --- Logging Configuration ---
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
+# -----------------------------
 
-    errors = []
-    if not sigma_files:
-        return errors
+SIGMA_DIR = "rules/sigma"
 
-    backend = LuceneBackend()
+def run_pysigma_validation():
+    logger.info("Starting pySigma validation...")
+    
+    if not os.path.exists(SIGMA_DIR):
+        logger.error(f"Directory '{SIGMA_DIR}' not found.")
+        return False
 
-    for filepath in sigma_files:
-        try:
-            with open(filepath, 'r') as f:
-                rule_content = f.read()
-            
-            # 1. Validate against Sigma Schema
-            collection = SigmaCollection.from_yaml(rule_content)
-            
-            # 2. Prove it can compile to a backend
-            backend.convert(collection)
+    try:
+        result = subprocess.run(
+            ["sigma", "check", SIGMA_DIR],
+            capture_output=True,
+            text=True
+        )
         
-        except SigmaError as e:
-            errors.append(f"pySigma Error in {filepath}: {e}")
-        except Exception as e:
-            errors.append(f"System Error processing {filepath}: {e}")
+        if result.returncode == 0:
+            logger.info("Validation passed. All Sigma rules are syntactically correct.")
+            return True
+        else:
+            logger.error("Validation failed. Fix the Sigma syntax errors below:")
+            # We keep standard print() here specifically to preserve the raw formatted output from the sigma-cli tool
+            print(result.stdout) 
+            print(result.stderr)
+            return False
             
-    return errors
-
-def main():
-    print("[*] Starting pySigma validation...")
-    
-    errors = validate_sigma_rules('rules')
-    
-    if errors:
-        print("\n[-] FATAL: Validation failed. Fix the Sigma syntax errors above.")
-        for error in errors:
-            print(f"    [-] {error}")
-        sys.exit(1)
-    else:
-        print("\n[+] Success: All Sigma rules passed validation.")
-        sys.exit(0)
+    except FileNotFoundError:
+        logger.error("sigma-cli is not installed or not in PATH. Run 'pip install sigma-cli'")
+        return False
 
 if __name__ == "__main__":
-    main()
+    success = run_pysigma_validation()
+    if not success:
+        sys.exit(1)
+    sys.exit(0)

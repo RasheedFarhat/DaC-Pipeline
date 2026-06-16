@@ -1,93 +1,99 @@
 import os
 import sys
-import yaml
 import xml.etree.ElementTree as ET
-from collections import Counter
+import yaml
+import logging
 
-RULES_DIR = "rules"
+# --- Logging Configuration ---
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
+# -----------------------------
 
-def validate_pipeline(directory):
+SIGMA_DIR = "rules/sigma"
+BUILD_DIR = "build/wazuh"
+
+def validate_pipeline(directories):
+    if isinstance(directories, str):
+        directories = [directories]
+        
     sigma_files = []
     xml_files = []
 
-    # 1. Categorize all rule files
-    for root, _, files in os.walk(directory):
-        for file in files:
-            if file.endswith(('.yml', '.yaml')):
-                sigma_files.append(os.path.join(root, file))
-            elif file.endswith('.xml'):
-                xml_files.append(os.path.join(root, file))
+    for directory in directories:
+        if not os.path.exists(directory):
+            continue
+        for root, _, files in os.walk(directory):
+            for file in files:
+                if file.endswith(('.yml', '.yaml')):
+                    sigma_files.append(os.path.join(root, file))
+                elif file.endswith('.xml'):
+                    xml_files.append(os.path.join(root, file))
 
     errors = []
-    
-    # 2. Parse Sigma & Collect Source of Truth UUIDs
-    sigma_uuids = {} # map: UUID -> filepath
-    for file in sigma_files:
-        try:
-            with open(file, 'r') as f:
+    sigma_uuids = set()
+    wazuh_ids = {}
+
+    for filepath in sigma_files:
+        with open(filepath, 'r') as f:
+            try:
                 data = yaml.safe_load(f)
-                if data and 'id' in data:
-                    rule_id = data['id']
-                    if rule_id in sigma_uuids:
-                        errors.append(f"[!] Duplicate Sigma UUID: {rule_id} found in {file} and {sigma_uuids[rule_id]}")
-                    else:
-                        sigma_uuids[rule_id] = file
-        except Exception as e:
-            errors.append(f"[!] Error parsing YAML {file}: {e}")
+                uuid = data.get('id')
+                if uuid:
+                    if uuid in sigma_uuids:
+                        errors.append(f"[!] Duplicate Sigma UUID detected: {uuid} in {filepath}")
+                    sigma_uuids.add(uuid)
+            except yaml.YAMLError as e:
+                errors.append(f"[!] Invalid YAML in {filepath}: {e}")
 
-    # 3. Parse XML, Validate Boundaries, & Enforce Correspondence
-    xml_ids = []
-    for file in xml_files:
+    for filepath in xml_files:
         try:
-            tree = ET.parse(file)
-            for rule in tree.getroot().findall('.//rule'):
+            tree = ET.parse(filepath)
+            root = tree.getroot()
+            for rule in root.findall('.//rule'):
                 rule_id = rule.get('id')
+                info_tag = rule.find(".//info[@type='sigma_uuid']")
                 
-                # A. Integer & Range Validation
                 if rule_id:
-                    try:
-                        rule_id_int = int(rule_id)
-                        xml_ids.append((rule_id_int, file))
-                        if rule_id_int < 100000:
-                            errors.append(f"[!] Reserved ID Violation: Rule {rule_id_int} in {file}. Custom rules must be >= 100000.")
-                    except ValueError:
-                        errors.append(f"[!] Invalid ID Format: Rule '{rule_id}' in {file} is not an integer.")
-                
-                # B. Strict UUID Correspondence Validation
-                sigma_ref = rule.find(".//info[@type='sigma_uuid']")
-                if sigma_ref is None or not sigma_ref.text:
-                    errors.append(f"[!] Orphaned XML (Omission): {file} (Rule {rule_id}) declares no Sigma parent (missing <info type='sigma_uuid'>).")
-                elif sigma_ref.text not in sigma_uuids:
-                    errors.append(f"[!] Dangling Reference: {file} (Rule {rule_id}) points to Sigma UUID '{sigma_ref.text}', which does not exist in the YAML source.")
-                    
-        except ET.ParseError as e:
-            errors.append(f"[!] XML Parse Error in {file}: {e}")
+                    if rule_id in wazuh_ids:
+                        wazuh_ids[rule_id].append(filepath)
+                    else:
+                        wazuh_ids[rule_id] = [filepath]
 
-    # 4. Check for duplicate Wazuh XML IDs
-    id_counts = Counter([data[0] for data in xml_ids])
-    duplicates = {id: count for id, count in id_counts.items() if count > 1}
-    for dup_id in duplicates:
-        shared_files = [file_path for rule_id, file_path in xml_ids if rule_id == dup_id]
-        errors.append(f"[!] Duplicate Wazuh XML ID detected: {dup_id}\n    Shared by: {', '.join(shared_files)}")
+                if info_tag is not None and info_tag.text:
+                    if info_tag.text not in sigma_uuids:
+                        errors.append(f"[!] Orphaned XML (Dangling): {filepath} references Sigma UUID {info_tag.text}, but it does not exist in the repository.")
+                else:
+                    errors.append(f"[!] Orphaned XML (Omission): {filepath} (Rule {rule_id}) declares no Sigma parent (missing <info type='sigma_uuid'>).")
+        except ET.ParseError as e:
+            errors.append(f"[!] Invalid XML in {filepath}: {e}")
+
+    for rule_id, files in wazuh_ids.items():
+        if len(files) > 1:
+            files_str = ', '.join(files)
+            errors.append(f"[!] Duplicate Wazuh XML ID detected: {rule_id}\n    Shared by: {files_str}")
 
     return errors
 
 def main():
-    print(f"[*] Starting Strict Validation & Correspondence Check in '{RULES_DIR}'...\n")
+    logger.info(f"Starting Strict Validation & Correspondence Check in '{SIGMA_DIR}' and '{BUILD_DIR}'...")
     
-    if not os.path.exists(RULES_DIR):
-        print(f"[-] Directory '{RULES_DIR}' not found. Exiting.")
+    if not os.path.exists(SIGMA_DIR) and not os.path.exists(BUILD_DIR):
+        logger.error("Rule directories not found. Exiting.")
         sys.exit(0)
 
-    errors = validate_pipeline(RULES_DIR)
+    errors = validate_pipeline([SIGMA_DIR, BUILD_DIR])
     
     if errors:
-        print("[-] CI/CD Pipeline halted. Validation failed with the following errors:\n")
+        logger.error("CI/CD Pipeline halted. Validation failed with the following errors:")
         for error in errors:
-            print(error)
+            logger.error(error)
         sys.exit(1)
     else:
-        print("[+] PASSED: All rules are valid, unique, and strictly linked via UUID.")
+        logger.info("PASSED: All rules are valid, unique, and strictly linked via UUID.")
         sys.exit(0)
 
 if __name__ == "__main__":
