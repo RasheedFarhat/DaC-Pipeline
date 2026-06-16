@@ -1,0 +1,9 @@
+build:
+  sigma_dir: "rules/sigma"
+  wazuh_dir: "build/wazuh"
+  template_dir: "templates"
+
+deploy:
+  api_url: "https://localhost:55000"
+  target_group: "default"
+  agent_conf_path: "configs/agent.conf"

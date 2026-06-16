@@ -3,6 +3,7 @@ import requests
 import urllib3
 import logging
 import argparse
+import yaml
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception, before_sleep_log
 
 # --- Logging Configuration ---
@@ -17,22 +18,32 @@ logger = logging.getLogger(__name__)
 # Suppress insecure HTTPS warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-WAZUH_API_URL = os.environ.get("WAZUH_API_URL", "https://localhost:55000")
+# --- Load Pipeline Configuration ---
+try:
+    with open("pipeline.yaml", "r") as f:
+        config = yaml.safe_load(f)
+except FileNotFoundError:
+    logger.warning("pipeline.yaml not found. Using default configurations.")
+    config = {}
+
+RULES_DIR = config.get("build", {}).get("wazuh_dir", "build/wazuh")
+AGENT_CONF_PATH = config.get("deploy", {}).get("agent_conf_path", "configs/agent.conf")
+TARGET_GROUP = config.get("deploy", {}).get("target_group", "default")
+YAML_API_URL = config.get("deploy", {}).get("api_url", "https://localhost:55000")
+# -----------------------------------
+
+# --- Environment Variables (Overrides YAML) ---
+WAZUH_API_URL = os.environ.get("WAZUH_API_URL", YAML_API_URL)
 WAZUH_USER = os.environ.get("WAZUH_USER")
 WAZUH_PASSWORD = os.environ.get("WAZUH_PASSWORD")
 TLS_VERIFY = os.environ.get("WAZUH_VERIFY_TLS", "true").lower() == "true"
-
-RULES_DIR = "build/wazuh"
-AGENT_CONF_PATH = "configs/agent.conf"
-TARGET_GROUP = "default"
+# ----------------------------------------------
 
 def is_retryable_exception(exception):
     """Determine if the exception is network-related or a rate limit (HTTP 429/5xx)."""
     if isinstance(exception, requests.exceptions.HTTPError):
         status = exception.response.status_code
-        # Retry on Too Many Requests or Server-Side Drops
         return status == 429 or status >= 500
-    # Retry on network-level disconnects and timeouts
     return isinstance(exception, (requests.exceptions.ConnectionError, requests.exceptions.Timeout))
 
 @retry(
@@ -44,7 +55,7 @@ def is_retryable_exception(exception):
 def safe_api_request(method, url, **kwargs):
     """Centralized API requester with exponential backoff."""
     response = requests.request(method, url, **kwargs)
-    response.raise_for_status() # Trigger HTTPError for 4xx and 5xx responses
+    response.raise_for_status() 
     return response
 
 def get_token():
