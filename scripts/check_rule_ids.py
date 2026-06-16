@@ -4,19 +4,25 @@ import yaml
 import xml.etree.ElementTree as ET
 from collections import Counter
 
-RULES_DIR = "rules"
+SIGMA_DIR = "rules/sigma"
+BUILD_DIR = "build/wazuh"
 
-def validate_pipeline(directory):
+def validate_pipeline(directories):
+    if isinstance(directories, str):
+        directories = [directories]
+        
     sigma_files = []
     xml_files = []
 
-    # 1. Categorize all rule files
-    for root, _, files in os.walk(directory):
-        for file in files:
-            if file.endswith(('.yml', '.yaml')):
-                sigma_files.append(os.path.join(root, file))
-            elif file.endswith('.xml'):
-                xml_files.append(os.path.join(root, file))
+    for directory in directories:
+        if not os.path.exists(directory):
+            continue
+        for root, _, files in os.walk(directory):
+            for file in files:
+                if file.endswith(('.yml', '.yaml')):
+                    sigma_files.append(os.path.join(root, file))
+                elif file.endswith('.xml'):
+                    xml_files.append(os.path.join(root, file))
 
     errors = []
     
@@ -73,13 +79,13 @@ def validate_pipeline(directory):
     return errors
 
 def main():
-    print(f"[*] Starting Strict Validation & Correspondence Check in '{RULES_DIR}'...\n")
+    print(f"[*] Starting Strict Validation & Correspondence Check in '{SIGMA_DIR}' and '{BUILD_DIR}'...\n")
     
-    if not os.path.exists(RULES_DIR):
-        print(f"[-] Directory '{RULES_DIR}' not found. Exiting.")
+    if not os.path.exists(SIGMA_DIR) and not os.path.exists(BUILD_DIR):
+        print("[-] Rule directories not found. Exiting.")
         sys.exit(0)
 
-    errors = validate_pipeline(RULES_DIR)
+    errors = validate_pipeline([SIGMA_DIR, BUILD_DIR])
     
     if errors:
         print("[-] CI/CD Pipeline halted. Validation failed with the following errors:\n")

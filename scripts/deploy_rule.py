@@ -15,7 +15,7 @@ args = parser.parse_args()
 API_URL = os.environ.get("WAZUH_API_URL", "https://127.0.0.1:55000")
 USER = os.environ.get("WAZUH_USER")
 PASSWORD = os.environ.get("WAZUH_PASSWORD")
-RULES_DIR = "rules/wazuh"
+RULES_DIR = "build/wazuh"
 CONFIG_FILE = "configs/agent.conf"
 TARGET_GROUP = "default"
 
