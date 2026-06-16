@@ -1,6 +1,16 @@
 import os
 import yaml
+import logging
 from jinja2 import Environment, FileSystemLoader
+
+# --- Logging Configuration ---
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
+# -----------------------------
 
 SIGMA_DIR = "rules/sigma"
 BUILD_DIR = "build/wazuh"
@@ -23,9 +33,7 @@ def get_parent_group(logsource):
 def map_fields(selection_dict):
     fields = {}
     for key, val in selection_dict.items():
-        # Strip Sigma modifiers (e.g., CommandLine|contains -> CommandLine)
         base_key = key.split('|')[0]
-        
         wazuh_field = base_key
         if base_key == "CommandLine": wazuh_field = "win.eventdata.commandLine"
         elif base_key == "Image": wazuh_field = "win.eventdata.image"
@@ -38,8 +46,12 @@ def map_fields(selection_dict):
     return fields
 
 def main():
-    print("\n[*] Compiling Sigma YAML to Wazuh XML...")
+    logger.info("Starting Sigma YAML to Wazuh XML compilation...")
     
+    if not os.path.exists(SIGMA_DIR):
+        logger.error(f"Directory {SIGMA_DIR} not found. Skipping compilation.")
+        return
+
     count = 0
     for filename in os.listdir(SIGMA_DIR):
         if not filename.endswith(('.yml', '.yaml')): continue
@@ -49,14 +61,13 @@ def main():
             sigma_data = yaml.safe_load(f)
             
         rule_id = sigma_data.get('id') 
-        wazuh_id = sigma_data.get('wazuh_id', '100000') # Extract custom field
+        wazuh_id = sigma_data.get('wazuh_id', '100000')
         title = sigma_data.get('title', 'DaC Generated Rule')
         level = sigma_level_to_wazuh(sigma_data.get('level', 'low'))
         logsource = sigma_data.get('logsource', {})
         parent_group = get_parent_group(logsource)
         tags = sigma_data.get('tags', [])
         
-        # Aggregate all selection blocks defensively
         selection_data = {}
         for k, v in sigma_data.get('detection', {}).items():
             if k.startswith('selection') and isinstance(v, dict):
@@ -80,10 +91,10 @@ def main():
         with open(os.path.join(BUILD_DIR, out_filename), 'w') as out_f:
             out_f.write(xml_content)
             
-        print(f"  -> {filename} compiled to build/wazuh/{out_filename}")
+        logger.debug(f"Compiled: {filename} -> {out_filename}")
         count += 1
         
-    print(f"[+] Successfully compiled {count} rules.")
+    logger.info(f"Successfully compiled {count} rules.")
 
 if __name__ == "__main__":
     main()
