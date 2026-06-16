@@ -58,6 +58,13 @@ def validate_pipeline(directories):
                 info_tag = rule.find(".//info[@type='sigma_uuid']")
                 
                 if rule_id:
+                    try:
+                        rule_id_int = int(rule_id)
+                        if rule_id_int < 100000:
+                            errors.append(f"[!] Reserved ID Violation: Rule {rule_id_int} in {filepath}. Custom rules must be >= 100000.")
+                    except ValueError:
+                        errors.append(f"[!] Invalid ID Format: Rule '{rule_id}' in {filepath} is not an integer.")
+
                     if rule_id in wazuh_ids:
                         wazuh_ids[rule_id].append(filepath)
                     else:
