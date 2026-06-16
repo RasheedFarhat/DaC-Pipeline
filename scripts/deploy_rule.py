@@ -3,6 +3,7 @@ import requests
 import urllib3
 import logging
 import argparse
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception, before_sleep_log
 
 # --- Logging Configuration ---
 logging.basicConfig(
@@ -25,6 +26,27 @@ RULES_DIR = "build/wazuh"
 AGENT_CONF_PATH = "configs/agent.conf"
 TARGET_GROUP = "default"
 
+def is_retryable_exception(exception):
+    """Determine if the exception is network-related or a rate limit (HTTP 429/5xx)."""
+    if isinstance(exception, requests.exceptions.HTTPError):
+        status = exception.response.status_code
+        # Retry on Too Many Requests or Server-Side Drops
+        return status == 429 or status >= 500
+    # Retry on network-level disconnects and timeouts
+    return isinstance(exception, (requests.exceptions.ConnectionError, requests.exceptions.Timeout))
+
+@retry(
+    retry=retry_if_exception(is_retryable_exception),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    stop=stop_after_attempt(5),
+    before_sleep=before_sleep_log(logger, logging.WARNING)
+)
+def safe_api_request(method, url, **kwargs):
+    """Centralized API requester with exponential backoff."""
+    response = requests.request(method, url, **kwargs)
+    response.raise_for_status() # Trigger HTTPError for 4xx and 5xx responses
+    return response
+
 def get_token():
     logger.info("Authenticating to the Wazuh API...")
     if not WAZUH_USER or not WAZUH_PASSWORD:
@@ -33,8 +55,7 @@ def get_token():
         
     url = f"{WAZUH_API_URL}/security/user/authenticate"
     try:
-        response = requests.get(url, auth=(WAZUH_USER, WAZUH_PASSWORD), verify=TLS_VERIFY)
-        response.raise_for_status()
+        response = safe_api_request('GET', url, auth=(WAZUH_USER, WAZUH_PASSWORD), verify=TLS_VERIFY)
         logger.info("Authentication successful.")
         return response.json()['data']['token']
     except Exception as e:
@@ -65,12 +86,8 @@ def deploy_rules(token, dry_run=False):
 
         url = f"{WAZUH_API_URL}/rules/files/{filename}"
         try:
-            response = requests.put(url, headers=headers, data=xml_content, verify=TLS_VERIFY)
-            if response.status_code == 200:
-                logger.info(f"Successfully deployed {filename}")
-            else:
-                logger.error(f"Failed to deploy {filename}: {response.text}")
-                success = False
+            safe_api_request('PUT', url, headers=headers, data=xml_content, verify=TLS_VERIFY)
+            logger.info(f"Successfully deployed {filename}")
         except Exception as e:
             logger.error(f"Error deploying {filename}: {e}")
             success = False
@@ -82,12 +99,7 @@ def reconcile_state(token, dry_run=False):
     IGNORE_FILES = {"local_rules.xml"}
     
     try:
-        response = requests.get(
-            f"{WAZUH_API_URL}/rules/files",
-            headers={'Authorization': f'Bearer {token}'},
-            verify=TLS_VERIFY
-        )
-        response.raise_for_status()
+        response = safe_api_request('GET', f"{WAZUH_API_URL}/rules/files", headers={'Authorization': f'Bearer {token}'}, verify=TLS_VERIFY)
         resp_json = response.json()
         
         remote_custom_files = set()
@@ -112,15 +124,8 @@ def reconcile_state(token, dry_run=False):
             if dry_run:
                 logger.info(f"[DRY RUN] Would DELETE orphaned rule: {filename}")
             else:
-                delete_resp = requests.delete(
-                    f"{WAZUH_API_URL}/rules/files/{filename}",
-                    headers={'Authorization': f'Bearer {token}'},
-                    verify=TLS_VERIFY
-                )
-                if delete_resp.status_code == 200:
-                    logger.info(f"Deleted orphaned rule: {filename}")
-                else:
-                    logger.error(f"Failed to delete {filename}: {delete_resp.text}")
+                safe_api_request('DELETE', f"{WAZUH_API_URL}/rules/files/{filename}", headers={'Authorization': f'Bearer {token}'}, verify=TLS_VERIFY)
+                logger.info(f"Deleted orphaned rule: {filename}")
     except Exception as e:
         logger.error(f"Error during state reconciliation: {e}")
 
@@ -140,11 +145,8 @@ def deploy_agent_conf(token, dry_run=False):
     url = f"{WAZUH_API_URL}/groups/{TARGET_GROUP}/configuration"
     headers = {'Authorization': f'Bearer {token}'}
     try:
-        response = requests.put(url, headers=headers, data=conf_content, verify=TLS_VERIFY)
-        if response.status_code == 200:
-            logger.info("Successfully deployed agent.conf")
-        else:
-            logger.error(f"Failed to deploy agent.conf: {response.text}")
+        safe_api_request('PUT', url, headers=headers, data=conf_content, verify=TLS_VERIFY)
+        logger.info("Successfully deployed agent.conf")
     except Exception as e:
         logger.error(f"Error deploying agent.conf: {e}")
 
@@ -153,11 +155,8 @@ def restart_manager(token):
     url = f"{WAZUH_API_URL}/manager/restart"
     headers = {'Authorization': f'Bearer {token}'}
     try:
-        response = requests.put(url, headers=headers, verify=TLS_VERIFY)
-        if response.status_code == 200:
-            logger.info("Restart command issued successfully.")
-        else:
-            logger.error(f"Failed to restart manager: {response.text}")
+        safe_api_request('PUT', url, headers=headers, verify=TLS_VERIFY)
+        logger.info("Restart command issued successfully.")
     except Exception as e:
         logger.error(f"Error restarting manager: {e}")
 
