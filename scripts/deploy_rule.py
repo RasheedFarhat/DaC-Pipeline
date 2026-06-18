@@ -1,6 +1,5 @@
 import os
 import requests
-import urllib3
 import logging
 import argparse
 import yaml
@@ -14,9 +13,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 # -----------------------------
-
-# Suppress insecure HTTPS warnings
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- Load Pipeline Configuration ---
 try:
@@ -36,8 +32,24 @@ YAML_API_URL = config.get("deploy", {}).get("api_url", "https://localhost:55000"
 WAZUH_API_URL = os.environ.get("WAZUH_API_URL", YAML_API_URL)
 WAZUH_USER = os.environ.get("WAZUH_USER")
 WAZUH_PASSWORD = os.environ.get("WAZUH_PASSWORD")
-TLS_VERIFY = os.environ.get("WAZUH_VERIFY_TLS", "true").lower() == "true"
-# ----------------------------------------------
+
+# --- Security Configuration ---
+# Allow users to pass a custom CA bundle for internal enterprise deployments
+# Or explicitly disable verification for local testing (not recommended for prod)
+CA_BUNDLE_PATH = os.environ.get("WAZUH_CA_BUNDLE")
+INSECURE_MODE = os.environ.get("WAZUH_INSECURE", "false").lower() == "true"
+
+if CA_BUNDLE_PATH and os.path.exists(CA_BUNDLE_PATH):
+    TLS_VERIFY = CA_BUNDLE_PATH
+elif INSECURE_MODE:
+    # Explicitly suppress the urllib3 warning ONLY if the user opted into insecure mode
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    TLS_VERIFY = False
+    logger.warning("INSECURE MODE ACTIVATED: TLS certificate verification is disabled.")
+else:
+    TLS_VERIFY = True # Secure by default
+# ------------------------------
 
 def is_retryable_exception(exception):
     """Determine if the exception is network-related or a rate limit (HTTP 429/5xx)."""
