@@ -5,7 +5,7 @@ on:
     branches: [ main, dev ]
 
 jobs:
-  validate-ids:
+  validate-and-build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -22,6 +22,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run Pytest Suite
-        run: |
-          pytest tests/
+      - name: Run Tooling Tests (Pytest)
+        run: pytest tests/
+
+      - name: Lint Sigma Logic
+        run: python scripts/validate_sigma.py
+
+      - name: Build XML Artifacts (The Missing Compiler)
+        run: python scripts/compile_sigma.py
+
+      - name: Validate IDs and Linkage
+        run: python scripts/check_rule_ids.py
