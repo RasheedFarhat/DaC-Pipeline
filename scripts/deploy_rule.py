@@ -56,7 +56,8 @@ def is_retryable_exception(exception):
     retry=retry_if_exception(is_retryable_exception),
     wait=wait_exponential(multiplier=1, min=2, max=10),
     stop=stop_after_attempt(5),
-    before_sleep=before_sleep_log(logger, logging.WARNING)
+    before_sleep=before_sleep_log(logger, logging.WARNING),
+    reraise=True # CRITICAL FIX: Forces tenacity to return the actual HTTP error, not a generic wrapper
 )
 def safe_api_request(method, url, **kwargs):
     response = requests.request(method, url, **kwargs)
@@ -67,22 +68,25 @@ def get_token():
     logger.info("Authenticating to the Wazuh API...")
     if not WAZUH_USER or not WAZUH_PASSWORD:
         logger.error("CRITICAL: WAZUH_USER and WAZUH_PASSWORD environment variables must be set.")
-        sys.exit(1) # CRITICAL FIX: Hard stop on missing credentials
+        sys.exit(1)
         
     url = f"{WAZUH_API_URL}/security/user/authenticate"
     try:
         response = safe_api_request('GET', url, auth=(WAZUH_USER, WAZUH_PASSWORD), verify=TLS_VERIFY)
         logger.info("Authentication successful.")
         return response.json()['data']['token']
-    except Exception as e:
-        logger.error(f"CRITICAL: Authentication failed: {e}")
-        sys.exit(1) # CRITICAL FIX: Hard stop on auth failure
+    except requests.exceptions.RequestException as e:
+        logger.error(f"CRITICAL: Network or HTTP error during authentication: {e}")
+        sys.exit(1)
+    except ValueError as e:
+        logger.error(f"CRITICAL: Failed to parse JSON response during authentication: {e}")
+        sys.exit(1)
 
 def deploy_rules(token, dry_run=False):
     logger.info(f"Scanning {RULES_DIR} for rule files...")
     if not os.path.exists(RULES_DIR):
         logger.error(f"CRITICAL: Directory {RULES_DIR} not found. Did the compiler run?")
-        sys.exit(1) # CRITICAL FIX: Hard stop if build directory is missing
+        sys.exit(1)
 
     headers = {'Authorization': f'Bearer {token}'}
     success = True
@@ -103,14 +107,13 @@ def deploy_rules(token, dry_run=False):
         try:
             safe_api_request('PUT', url, headers=headers, data=xml_content, verify=TLS_VERIFY)
             logger.info(f"Successfully deployed {filename}")
-        except Exception as e:
-            logger.error(f"ERROR: Failed deploying {filename}: {e}")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"ERROR: Network or API failure deploying {filename}: {e}")
             success = False
 
     return success
 
 def reconcile_state(token, dry_run=False):
-    # (Keeping state reconciliation logic identical to your previous version)
     logger.info("Reconciling State (Detecting and deleting orphaned rules)...")
     IGNORE_FILES = {"local_rules.xml"}
     try:
@@ -141,8 +144,10 @@ def reconcile_state(token, dry_run=False):
             else:
                 safe_api_request('DELETE', f"{WAZUH_API_URL}/rules/files/{filename}", headers={'Authorization': f'Bearer {token}'}, verify=TLS_VERIFY)
                 logger.info(f"Deleted orphaned rule: {filename}")
-    except Exception as e:
-        logger.error(f"Error during state reconciliation: {e}")
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error during state reconciliation (Network/API): {e}")
+    except ValueError as e:
+        logger.error(f"Error parsing state reconciliation response: {e}")
 
 def deploy_agent_conf(token, dry_run=False):
     logger.info(f"Deploying {AGENT_CONF_PATH} to Wazuh group: '{TARGET_GROUP}'...")
@@ -162,9 +167,8 @@ def deploy_agent_conf(token, dry_run=False):
     try:
         safe_api_request('PUT', url, headers=headers, data=conf_content, verify=TLS_VERIFY)
         logger.info("Successfully deployed agent.conf")
-    except Exception as e:
-        logger.error(f"Error deploying agent.conf: {e}")
-        # Not a hard exit here to allow rule deployment to finish, but could be adjusted
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error deploying agent.conf (Network/API): {e}")
 
 def restart_manager(token):
     logger.info("Restarting Wazuh Manager to apply changes...")
@@ -173,9 +177,9 @@ def restart_manager(token):
     try:
         safe_api_request('PUT', url, headers=headers, verify=TLS_VERIFY)
         logger.info("Restart command issued successfully.")
-    except Exception as e:
-        logger.error(f"Error restarting manager: {e}")
-        sys.exit(1) # CRITICAL FIX: Fail the pipeline if the SIEM doesn't restart
+    except requests.exceptions.RequestException as e:
+        logger.error(f"CRITICAL: Network/HTTP error restarting manager: {e}")
+        sys.exit(1)
 
 def main():
     parser = argparse.ArgumentParser(description="Deploy Wazuh Rules via API")
@@ -190,7 +194,7 @@ def main():
     success = deploy_rules(token, args.dry_run)
     if not success:
         logger.error("CRITICAL: One or more rules failed to deploy. Halting pipeline.")
-        sys.exit(1) # CRITICAL FIX: Hard stop if partial failure occurs
+        sys.exit(1)
 
     reconcile_state(token, args.dry_run)
     deploy_agent_conf(token, args.dry_run)
