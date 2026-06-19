@@ -2,3 +2,5 @@ venv/
 .DS_Store
 build/
 build/wazuh/
+__pycache__/
+*.pyc
