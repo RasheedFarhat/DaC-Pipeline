@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 # --- Strict Configuration Schema ---
 class Settings(BaseSettings):
     wazuh_api_url: str = Field(default="https://localhost:55000")
-    wazuh_user: str = Field(...) # The ellipsis (...) means this is strictly REQUIRED
+    wazuh_user: str = Field(...)
     wazuh_password: str = Field(...)
     wazuh_ca_bundle: Optional[str] = Field(default=None)
     wazuh_insecure: bool = Field(default=False)
@@ -32,7 +32,6 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file='.env', extra='ignore')
 
 def load_settings() -> Settings:
-    """Loads YAML configs and allows Pydantic to override them with OS environment variables."""
     config_data: Dict[str, Any] = {}
     try:
         with open("pipeline.yaml", "r") as f:
@@ -46,7 +45,6 @@ def load_settings() -> Settings:
         logger.warning("pipeline.yaml not found. Relying strictly on environment variables and defaults.")
 
     try:
-        # Pydantic validates the merged data. If WAZUH_USER is missing, it crashes immediately here.
         return Settings(**config_data)
     except ValidationError as e:
         logger.error(f"CRITICAL: Configuration Validation Failed! Missing or invalid environment variables.\n{e}")
@@ -100,7 +98,10 @@ def deploy_rules(token: str, settings: Settings, tls_verify: Union[bool, str], d
         logger.error(f"CRITICAL: Directory {settings.wazuh_dir} not found. Did the compiler run?")
         sys.exit(1)
 
-    headers: Dict[str, str] = {'Authorization': f'Bearer {token}'}
+    # REVERT: Removed Content-Type to prevent 415 errors. Wazuh expects defaults here.
+    headers: Dict[str, str] = {
+        'Authorization': f'Bearer {token}'
+    }
     success: bool = True
 
     for filename in os.listdir(settings.wazuh_dir):
@@ -175,7 +176,14 @@ def deploy_agent_conf(token: str, settings: Settings, tls_verify: Union[bool, st
         conf_content: str = f.read()
 
     url: str = f"{settings.wazuh_api_url}/groups/{settings.target_group}/configuration"
-    headers: Dict[str, str] = {'Authorization': f'Bearer {token}'}
+
+    # KEEPS FIX: This endpoint specifically requires the explicit Content-Type headers.
+    headers: Dict[str, str] = {
+        'Authorization': f'Bearer {token}',
+        'Content-Type': 'application/xml',
+        'Accept': 'application/json'
+    }
+
     try:
         safe_api_request('PUT', url, headers=headers, data=conf_content, verify=tls_verify)
         logger.info("Successfully deployed agent.conf")
@@ -201,7 +209,6 @@ def main() -> None:
     if args.dry_run:
         logger.warning("=== DRY RUN MODE ACTIVATED - NO CHANGES WILL BE MADE ===")
 
-    # 1. Fail Fast: Pydantic strictly validates all variables before we even try to execute
     settings: Settings = load_settings()
     tls_verify: Union[bool, str] = get_tls_strategy(settings)
 
