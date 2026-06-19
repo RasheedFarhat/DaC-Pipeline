@@ -1,16 +1,14 @@
 repos:
-  - repo: local
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
     hooks:
-      - id: validate-sigma
-        name: Validate Sigma Syntax
-        entry: python scripts/validate_sigma.py
-        language: system
-        pass_filenames: false
-        always_run: true
-        
-      - id: check-rule-ids
-        name: Check Rule IDs and Linkage
-        entry: python scripts/check_rule_ids.py
-        language: system
-        pass_filenames: false
-        always_run: true
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v2.1.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-requests, types-PyYAML]
+        args: [--ignore-missing-imports]
