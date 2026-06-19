@@ -1,4 +1,5 @@
 import os
+import sys
 import requests
 import logging
 import argparse
@@ -12,7 +13,6 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 logger = logging.getLogger(__name__)
-# -----------------------------
 
 # --- Load Pipeline Configuration ---
 try:
@@ -26,7 +26,6 @@ RULES_DIR = config.get("build", {}).get("wazuh_dir", "build/wazuh")
 AGENT_CONF_PATH = config.get("deploy", {}).get("agent_conf_path", "configs/agent.conf")
 TARGET_GROUP = config.get("deploy", {}).get("target_group", "default")
 YAML_API_URL = config.get("deploy", {}).get("api_url", "https://localhost:55000")
-# -----------------------------------
 
 # --- Environment Variables (Overrides YAML) ---
 WAZUH_API_URL = os.environ.get("WAZUH_API_URL", YAML_API_URL)
@@ -34,25 +33,20 @@ WAZUH_USER = os.environ.get("WAZUH_USER")
 WAZUH_PASSWORD = os.environ.get("WAZUH_PASSWORD")
 
 # --- Security Configuration ---
-# Allow users to pass a custom CA bundle for internal enterprise deployments
-# Or explicitly disable verification for local testing (not recommended for prod)
 CA_BUNDLE_PATH = os.environ.get("WAZUH_CA_BUNDLE")
 INSECURE_MODE = os.environ.get("WAZUH_INSECURE", "false").lower() == "true"
 
 if CA_BUNDLE_PATH and os.path.exists(CA_BUNDLE_PATH):
     TLS_VERIFY = CA_BUNDLE_PATH
 elif INSECURE_MODE:
-    # Explicitly suppress the urllib3 warning ONLY if the user opted into insecure mode
     import urllib3
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     TLS_VERIFY = False
     logger.warning("INSECURE MODE ACTIVATED: TLS certificate verification is disabled.")
 else:
-    TLS_VERIFY = True # Secure by default
-# ------------------------------
+    TLS_VERIFY = True 
 
 def is_retryable_exception(exception):
-    """Determine if the exception is network-related or a rate limit (HTTP 429/5xx)."""
     if isinstance(exception, requests.exceptions.HTTPError):
         status = exception.response.status_code
         return status == 429 or status >= 500
@@ -65,7 +59,6 @@ def is_retryable_exception(exception):
     before_sleep=before_sleep_log(logger, logging.WARNING)
 )
 def safe_api_request(method, url, **kwargs):
-    """Centralized API requester with exponential backoff."""
     response = requests.request(method, url, **kwargs)
     response.raise_for_status() 
     return response
@@ -73,8 +66,8 @@ def safe_api_request(method, url, **kwargs):
 def get_token():
     logger.info("Authenticating to the Wazuh API...")
     if not WAZUH_USER or not WAZUH_PASSWORD:
-        logger.error("WAZUH_USER and WAZUH_PASSWORD environment variables must be set.")
-        return None
+        logger.error("CRITICAL: WAZUH_USER and WAZUH_PASSWORD environment variables must be set.")
+        sys.exit(1) # CRITICAL FIX: Hard stop on missing credentials
         
     url = f"{WAZUH_API_URL}/security/user/authenticate"
     try:
@@ -82,14 +75,14 @@ def get_token():
         logger.info("Authentication successful.")
         return response.json()['data']['token']
     except Exception as e:
-        logger.error(f"Authentication failed: {e}")
-        return None
+        logger.error(f"CRITICAL: Authentication failed: {e}")
+        sys.exit(1) # CRITICAL FIX: Hard stop on auth failure
 
 def deploy_rules(token, dry_run=False):
     logger.info(f"Scanning {RULES_DIR} for rule files...")
     if not os.path.exists(RULES_DIR):
-        logger.error(f"Directory {RULES_DIR} not found.")
-        return False
+        logger.error(f"CRITICAL: Directory {RULES_DIR} not found. Did the compiler run?")
+        sys.exit(1) # CRITICAL FIX: Hard stop if build directory is missing
 
     headers = {'Authorization': f'Bearer {token}'}
     success = True
@@ -99,7 +92,6 @@ def deploy_rules(token, dry_run=False):
             continue
 
         filepath = os.path.join(RULES_DIR, filename)
-        
         with open(filepath, 'r') as f:
             xml_content = f.read()
 
@@ -112,15 +104,15 @@ def deploy_rules(token, dry_run=False):
             safe_api_request('PUT', url, headers=headers, data=xml_content, verify=TLS_VERIFY)
             logger.info(f"Successfully deployed {filename}")
         except Exception as e:
-            logger.error(f"Error deploying {filename}: {e}")
+            logger.error(f"ERROR: Failed deploying {filename}: {e}")
             success = False
 
     return success
 
 def reconcile_state(token, dry_run=False):
+    # (Keeping state reconciliation logic identical to your previous version)
     logger.info("Reconciling State (Detecting and deleting orphaned rules)...")
     IGNORE_FILES = {"local_rules.xml"}
-    
     try:
         response = safe_api_request('GET', f"{WAZUH_API_URL}/rules/files", headers={'Authorization': f'Bearer {token}'}, verify=TLS_VERIFY)
         resp_json = response.json()
@@ -172,6 +164,7 @@ def deploy_agent_conf(token, dry_run=False):
         logger.info("Successfully deployed agent.conf")
     except Exception as e:
         logger.error(f"Error deploying agent.conf: {e}")
+        # Not a hard exit here to allow rule deployment to finish, but could be adjusted
 
 def restart_manager(token):
     logger.info("Restarting Wazuh Manager to apply changes...")
@@ -182,6 +175,7 @@ def restart_manager(token):
         logger.info("Restart command issued successfully.")
     except Exception as e:
         logger.error(f"Error restarting manager: {e}")
+        sys.exit(1) # CRITICAL FIX: Fail the pipeline if the SIEM doesn't restart
 
 def main():
     parser = argparse.ArgumentParser(description="Deploy Wazuh Rules via API")
@@ -192,10 +186,12 @@ def main():
         logger.warning("=== DRY RUN MODE ACTIVATED - NO CHANGES WILL BE MADE ===")
 
     token = get_token()
-    if not token:
-        return
+    
+    success = deploy_rules(token, args.dry_run)
+    if not success:
+        logger.error("CRITICAL: One or more rules failed to deploy. Halting pipeline.")
+        sys.exit(1) # CRITICAL FIX: Hard stop if partial failure occurs
 
-    deploy_rules(token, args.dry_run)
     reconcile_state(token, args.dry_run)
     deploy_agent_conf(token, args.dry_run)
 
