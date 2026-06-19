@@ -5,7 +5,7 @@ on:
     branches: [ main, dev ]
 
 jobs:
-  validate-and-build:
+  validate-ids:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
