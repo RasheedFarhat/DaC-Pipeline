@@ -1,4 +1,5 @@
 import os
+import re
 import logging
 from jinja2 import Environment, FileSystemLoader
 from sigma.collection import SigmaCollection
@@ -11,7 +12,6 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 logger = logging.getLogger(__name__)
-# -----------------------------
 
 SIGMA_DIR = "rules/sigma"
 BUILD_DIR = "build/wazuh"
@@ -32,26 +32,17 @@ def get_parent_group(service):
     return 'syslog'
 
 def is_logic_supported(parsed_condition):
-    """
-    Recursively audits the AST condition tree for unsupported logic (e.g., NOT).
-    Wazuh natively evaluates <field> tags as AND, so we must reject explicit NOTs.
-    """
     node_type = parsed_condition.__class__.__name__
-    
     if node_type == "ConditionNOT":
         return False
-        
     if hasattr(parsed_condition, 'args'):
         for arg in parsed_condition.args:
             if not is_logic_supported(arg):
                 return False
-                
     return True
 
 def extract_fields_from_ast(rule):
-    """Walks the pySigma AST to safely extract fields."""
     fields = {}
-    
     for detection_name, detection in rule.detection.detections.items():
         for item in detection.detection_items:
             if not item.field:
@@ -64,7 +55,10 @@ def extract_fields_from_ast(rule):
             
             values = []
             for val in item.value:
-                val_str = str(val).replace('*', '.*')
+                # FIX: The Regex Trap. Escape regex metacharacters FIRST, 
+                # then unescape the literal asterisk and turn it into a regex wildcard.
+                escaped_val = re.escape(str(val))
+                val_str = escaped_val.replace('\\*', '.*')
                 values.append(val_str)
                 
             if len(values) > 1:
@@ -84,18 +78,21 @@ def main():
     count = 0
     skipped = 0
     
-    for filename in os.listdir(SIGMA_DIR):
+    # FIX: The ID Collision Tracker
+    used_wazuh_ids = set()
+    auto_id_counter = 100000
+    
+    # FIX: Deterministic parsing order using sorted()
+    for filename in sorted(os.listdir(SIGMA_DIR)):
         if not filename.endswith(('.yml', '.yaml')): 
             continue
             
         filepath = os.path.join(SIGMA_DIR, filename)
         
-        # FIX: Open the file and read the actual YAML content into a string first
         with open(filepath, 'r') as f:
             yaml_content = f.read()
         
         try:
-            # Pass the raw text content to pySigma, NOT the file path
             collection = SigmaCollection.from_yaml(yaml_content)
         except SigmaError as e:
             logger.error(f"pySigma Validation Error in {filename}: {e}")
@@ -103,21 +100,31 @@ def main():
             continue 
 
         for rule in collection.rules:
-            # Extract the root of the parsed condition tree
             parsed_condition_tree = rule.detection.parsed_condition[0].parsed
             
             if not is_logic_supported(parsed_condition_tree):
-                logger.warning(f"Skipping {filename}: Contains unsupported logic (e.g., NOT) for native Wazuh XML.")
+                logger.warning(f"Skipping {filename}: Contains unsupported logic (e.g., NOT).")
                 skipped += 1
                 continue
 
             fields = extract_fields_from_ast(rule)
-            
             service = rule.logsource.service if rule.logsource else 'custom'
             product = rule.logsource.product if rule.logsource else 'custom'
             tags = [tag.name for tag in rule.tags] if rule.tags else []
             level = rule.level.name if rule.level else 'low'
-            wazuh_id = rule.custom_attributes.get('wazuh_id', '100000') if rule.custom_attributes else '100000'
+            
+            # --- ID ALLOCATION LOGIC ---
+            # If a rule has a custom ID, log it so we don't accidentally overwrite it
+            if rule.custom_attributes and 'wazuh_id' in rule.custom_attributes:
+                wazuh_id = str(rule.custom_attributes['wazuh_id'])
+                used_wazuh_ids.add(wazuh_id)
+            else:
+                # If no ID exists, increment our counter until we find an unused ID
+                while str(auto_id_counter) in used_wazuh_ids:
+                    auto_id_counter += 1
+                wazuh_id = str(auto_id_counter)
+                used_wazuh_ids.add(wazuh_id)
+            # ---------------------------
             
             xml_content = template.render(
                 product=product,
