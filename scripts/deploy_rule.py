@@ -160,6 +160,17 @@ def reconcile_state(token: str, settings: Settings, tls_verify: Union[bool, str]
             logger.info("State matches. No orphaned rules to delete.")
             return
 
+        # --- SAFEGUARD ---
+        DELETE_THRESHOLD = 5
+        if len(orphaned_files) > DELETE_THRESHOLD:
+            if dry_run:
+                logger.warning(f"[DRY RUN] WARNING: Would attempt to delete {len(orphaned_files)} rules, which exceeds the safety threshold of {DELETE_THRESHOLD}.")
+            else:
+                logger.error(f"CRITICAL: Orphaned rule count ({len(orphaned_files)}) exceeds the blast radius threshold of {DELETE_THRESHOLD}.")
+                logger.error("Aborting deployment to prevent accidental purging of production rules.")
+                sys.exit(1)
+        # ------------------------------
+
         for filename in orphaned_files:
             if dry_run:
                 logger.info(f"[DRY RUN] Would DELETE orphaned rule: {filename}")
