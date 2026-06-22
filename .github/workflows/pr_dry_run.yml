@@ -38,7 +38,6 @@ jobs:
       - name: Execute Dry Run
         id: dry_run
         env:
-          # Explicitly mock the environment variables to bypass Pydantic validation during CI
           WAZUH_API_URL: "https://localhost:55000"
           WAZUH_USER: "ci_dry_run_user"
           WAZUH_PASSWORD: "ci_dry_run_password"
@@ -54,15 +53,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          COMMENT_BODY="### 🚀 Deployment Dry-Run Results
+          echo "### 🚀 Deployment Dry-Run Results" > pr_comment.txt
+          echo "" >> pr_comment.txt
+          echo "<details>" >> pr_comment.txt
+          echo "<summary>Click to view what will happen when this PR is merged</summary>" >> pr_comment.txt
+          echo "" >> pr_comment.txt
+          echo '```text' >> pr_comment.txt
+          echo "$DRY_RUN_OUTPUT" >> pr_comment.txt
+          echo '```' >> pr_comment.txt
+          echo "" >> pr_comment.txt
+          echo "</details>" >> pr_comment.txt
 
-          <details>
-          <summary>Click to view what will happen when this PR is merged</summary>
-
-          \`\`\`text
-          ${{ env.DRY_RUN_OUTPUT }}
-          \`\`\`
-
-          </details>"
-
-          gh pr comment ${{ github.event.pull_request.number }} -b "$COMMENT_BODY"
+          gh pr comment ${{ github.event.pull_request.number }} -F pr_comment.txt
