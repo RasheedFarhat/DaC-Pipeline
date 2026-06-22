@@ -1,8 +1,11 @@
 import os
+import re
 import logging
+from typing import Dict, Any, Set, List
 from jinja2 import Environment, FileSystemLoader
 from sigma.collection import SigmaCollection
 from sigma.exceptions import SigmaError
+from sigma.rule import SigmaRule
 
 # --- Logging Configuration ---
 logging.basicConfig(
@@ -11,115 +14,121 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 logger = logging.getLogger(__name__)
-# -----------------------------
 
-SIGMA_DIR = "rules/sigma"
-BUILD_DIR = "build/wazuh"
-TEMPLATE_DIR = "templates"
+SIGMA_DIR: str = "rules/sigma"
+BUILD_DIR: str = "build/wazuh"
+TEMPLATE_DIR: str = "templates"
 
 os.makedirs(BUILD_DIR, exist_ok=True)
-env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
+env: Environment = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
 template = env.get_template('wazuh_rule.xml.j2')
 
-def map_wazuh_level(sigma_level):
-    mapping = {'informational': 3, 'low': 5, 'medium': 7, 'high': 10, 'critical': 12}
+def map_wazuh_level(sigma_level: str) -> int:
+    mapping: Dict[str, int] = {'informational': 3, 'low': 5, 'medium': 7, 'high': 10, 'critical': 12}
     return mapping.get(sigma_level.lower(), 5)
 
-def get_parent_group(service):
-    service = service.lower() if service else ''
-    if service == 'sysmon': return 'sysmon_event1'
-    if service == 'syscheck': return 'syscheck'
+def get_parent_group(service: str) -> str:
+    service_lower: str = service.lower() if service else ''
+    if service_lower == 'sysmon': return 'sysmon_event1'
+    if service_lower == 'syscheck': return 'syscheck'
     return 'syslog'
 
-def is_logic_supported(parsed_condition):
-    """
-    Recursively audits the AST condition tree for unsupported logic (e.g., NOT).
-    Wazuh natively evaluates <field> tags as AND, so we must reject explicit NOTs.
-    """
-    node_type = parsed_condition.__class__.__name__
-    
+def is_logic_supported(parsed_condition: Any) -> bool:
+    node_type: str = parsed_condition.__class__.__name__
     if node_type == "ConditionNOT":
         return False
-        
     if hasattr(parsed_condition, 'args'):
         for arg in parsed_condition.args:
             if not is_logic_supported(arg):
                 return False
-                
     return True
 
-def extract_fields_from_ast(rule):
-    """Walks the pySigma AST to safely extract fields."""
-    fields = {}
-    
+def extract_fields_from_ast(rule: Any) -> Dict[str, str]:
+    fields: Dict[str, str] = {}
     for detection_name, detection in rule.detection.detections.items():
         for item in detection.detection_items:
             if not item.field:
-                continue 
-                
-            wazuh_field = item.field
+                continue
+
+            wazuh_field: str = item.field
             if wazuh_field == "CommandLine": wazuh_field = "win.eventdata.commandLine"
             elif wazuh_field == "Image": wazuh_field = "win.eventdata.image"
             elif wazuh_field == "file": wazuh_field = "syscheck.path"
-            
-            values = []
+
+            values: List[str] = []
             for val in item.value:
-                val_str = str(val).replace('*', '.*')
+                escaped_val: str = re.escape(str(val))
+                val_str: str = escaped_val.replace('\\*', '.*')
                 values.append(val_str)
-                
+
             if len(values) > 1:
                 fields[wazuh_field] = f"({'|'.join(values)})"
             elif len(values) == 1:
                 fields[wazuh_field] = values[0]
-                
+
     return fields
 
-def main():
+def main() -> None:
     logger.info("Starting pySigma AST Compilation to Wazuh XML...")
-    
+
     if not os.path.exists(SIGMA_DIR):
         logger.error(f"Directory {SIGMA_DIR} not found. Skipping compilation.")
         return
 
-    count = 0
-    skipped = 0
-    
-    for filename in os.listdir(SIGMA_DIR):
-        if not filename.endswith(('.yml', '.yaml')): 
+    count: int = 0
+    skipped: int = 0
+
+    used_wazuh_ids: Set[str] = set()
+    auto_id_counter: int = 100000
+
+    for filename in sorted(os.listdir(SIGMA_DIR)):
+        if not filename.endswith(('.yml', '.yaml')):
             continue
-            
-        filepath = os.path.join(SIGMA_DIR, filename)
-        
-        # FIX: Open the file and read the actual YAML content into a string first
+
+        filepath: str = os.path.join(SIGMA_DIR, filename)
+
         with open(filepath, 'r') as f:
-            yaml_content = f.read()
-        
+            yaml_content: str = f.read()
+
         try:
-            # Pass the raw text content to pySigma, NOT the file path
             collection = SigmaCollection.from_yaml(yaml_content)
         except SigmaError as e:
             logger.error(f"pySigma Validation Error in {filename}: {e}")
             skipped += 1
-            continue 
+            continue
 
         for rule in collection.rules:
-            # Extract the root of the parsed condition tree
-            parsed_condition_tree = rule.detection.parsed_condition[0].parsed
-            
-            if not is_logic_supported(parsed_condition_tree):
-                logger.warning(f"Skipping {filename}: Contains unsupported logic (e.g., NOT) for native Wazuh XML.")
+            # --- MYPY FIX: Type Guard against Correlation Rules ---
+            if not isinstance(rule, SigmaRule):
+                logger.warning(f"Skipping unsupported Correlation Rule in {filename}.")
                 skipped += 1
                 continue
 
-            fields = extract_fields_from_ast(rule)
-            
-            service = rule.logsource.service if rule.logsource else 'custom'
-            product = rule.logsource.product if rule.logsource else 'custom'
-            tags = [tag.name for tag in rule.tags] if rule.tags else []
-            level = rule.level.name if rule.level else 'low'
-            wazuh_id = rule.custom_attributes.get('wazuh_id', '100000') if rule.custom_attributes else '100000'
-            
-            xml_content = template.render(
+            parsed_condition_tree = rule.detection.parsed_condition[0].parsed
+
+            if not is_logic_supported(parsed_condition_tree):
+                logger.warning(f"Skipping {filename}: Contains unsupported logic (e.g., NOT).")
+                skipped += 1
+                continue
+
+            fields: Dict[str, str] = extract_fields_from_ast(rule)
+
+            # --- MYPY FIX: Force explicit string casting ---
+            service: str = str(rule.logsource.service) if rule.logsource and rule.logsource.service else 'custom'
+            product: str = str(rule.logsource.product) if rule.logsource and rule.logsource.product else 'custom'
+            tags: List[str] = [str(tag.name) for tag in rule.tags] if rule.tags else []
+            level: str = str(rule.level.name) if rule.level else 'low'
+
+            if rule.custom_attributes and 'wazuh_id' in rule.custom_attributes:
+                wazuh_id: str = str(rule.custom_attributes['wazuh_id'])
+                used_wazuh_ids.add(wazuh_id)
+            else:
+                while str(auto_id_counter) in used_wazuh_ids:
+                    auto_id_counter += 1
+                wazuh_id = str(auto_id_counter)
+                used_wazuh_ids.add(wazuh_id)
+
+            xml_content: str = template.render(
                 product=product,
                 service=service,
                 rule_id=rule.id,
@@ -130,14 +139,14 @@ def main():
                 title=rule.title,
                 tags=tags
             )
-            
-            out_filename = filename.replace('.yml', '.xml').replace('.yaml', '.xml')
+
+            out_filename: str = filename.replace('.yml', '.xml').replace('.yaml', '.xml')
             with open(os.path.join(BUILD_DIR, out_filename), 'w') as out_f:
                 out_f.write(xml_content)
-                
+
             logger.debug(f"Compiled: {filename} -> {out_filename}")
             count += 1
-        
+
     logger.info(f"Successfully compiled {count} rules. Skipped {skipped} rules.")
 
 if __name__ == "__main__":
