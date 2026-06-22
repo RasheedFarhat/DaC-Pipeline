@@ -3,6 +3,7 @@ import os
 import pytest
 import requests
 import responses
+from unittest.mock import patch
 
 # Add the scripts directory to the path so we can import our deployment script
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../scripts')))
@@ -21,8 +22,9 @@ def test_safe_api_request_success():
     assert resp.status_code == 200
     assert len(responses.calls) == 1
 
+@patch('time.sleep', return_value=None)
 @responses.activate
-def test_safe_api_request_retry_on_429():
+def test_safe_api_request_retry_on_429(mock_sleep):
     """
     Test the Rate Limit Survivor.
     Simulate the API throwing 429 (Too Many Requests) three times,
@@ -43,8 +45,9 @@ def test_safe_api_request_retry_on_429():
     # Prove that it actually took 4 attempts to get there
     assert len(responses.calls) == 4
 
+@patch('time.sleep', return_value=None)
 @responses.activate
-def test_safe_api_request_max_retries_on_500():
+def test_safe_api_request_max_retries_on_500(mock_sleep):
     """
     Test the Hard Crash.
     Simulate a dead server (500 Internal Server Error).
