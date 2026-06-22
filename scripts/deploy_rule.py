@@ -78,7 +78,8 @@ def safe_api_request(method: str, url: str, **kwargs: Any) -> requests.Response:
     response.raise_for_status()
     return response
 
-def get_token(settings: Settings, tls_verify: Union[bool, str]) -> str:
+# THE FIX: Added dry_run parameter and offline token fallback
+def get_token(settings: Settings, tls_verify: Union[bool, str], dry_run: bool = False) -> str:
     logger.info("Authenticating to the Wazuh API...")
     url: str = f"{settings.wazuh_api_url}/security/user/authenticate"
     try:
@@ -86,6 +87,9 @@ def get_token(settings: Settings, tls_verify: Union[bool, str]) -> str:
         logger.info("Authentication successful.")
         return str(response.json()['data']['token'])
     except requests.exceptions.RequestException as e:
+        if dry_run:
+            logger.warning(f"API unreachable ({e}). Falling back to OFFLINE dry-run mode.")
+            return "OFFLINE_DRY_RUN_TOKEN"
         logger.error(f"CRITICAL: Network or HTTP error during authentication: {e}")
         sys.exit(1)
     except ValueError as e:
@@ -98,7 +102,6 @@ def deploy_rules(token: str, settings: Settings, tls_verify: Union[bool, str], d
         logger.error(f"CRITICAL: Directory {settings.wazuh_dir} not found. Did the compiler run?")
         sys.exit(1)
 
-    # REVERT: Removed Content-Type to prevent 415 errors. Wazuh expects defaults here.
     headers: Dict[str, str] = {
         'Authorization': f'Bearer {token}'
     }
@@ -126,8 +129,14 @@ def deploy_rules(token: str, settings: Settings, tls_verify: Union[bool, str], d
 
     return success
 
+# THE FIX: Added offline token check to bypass remote state query
 def reconcile_state(token: str, settings: Settings, tls_verify: Union[bool, str], dry_run: bool = False) -> None:
     logger.info("Reconciling State (Detecting and deleting orphaned rules)...")
+
+    if token == "OFFLINE_DRY_RUN_TOKEN":
+        logger.info("[DRY RUN] API is offline. Skipping remote orphan reconciliation.")
+        return
+
     IGNORE_FILES: Set[str] = {"local_rules.xml"}
     try:
         response: requests.Response = safe_api_request('GET', f"{settings.wazuh_api_url}/rules/files", headers={'Authorization': f'Bearer {token}'}, verify=tls_verify)
@@ -177,7 +186,6 @@ def deploy_agent_conf(token: str, settings: Settings, tls_verify: Union[bool, st
 
     url: str = f"{settings.wazuh_api_url}/groups/{settings.target_group}/configuration"
 
-    # KEEPS FIX: This endpoint specifically requires the explicit Content-Type headers.
     headers: Dict[str, str] = {
         'Authorization': f'Bearer {token}',
         'Content-Type': 'application/xml',
@@ -201,6 +209,7 @@ def restart_manager(token: str, settings: Settings, tls_verify: Union[bool, str]
         logger.error(f"CRITICAL: Network/HTTP error restarting manager: {e}")
         sys.exit(1)
 
+# THE FIX: Ensure args.dry_run is passed into get_token
 def main() -> None:
     parser = argparse.ArgumentParser(description="Deploy Wazuh Rules via API")
     parser.add_argument("--dry-run", action="store_true", help="Simulate deployment without making changes")
@@ -212,7 +221,7 @@ def main() -> None:
     settings: Settings = load_settings()
     tls_verify: Union[bool, str] = get_tls_strategy(settings)
 
-    token: str = get_token(settings, tls_verify)
+    token: str = get_token(settings, tls_verify, args.dry_run)
 
     success: bool = deploy_rules(token, settings, tls_verify, args.dry_run)
     if not success:
