@@ -1,9 +1,10 @@
 import os
 import re
-import json
 import sys
+import shutil
 import logging
-from typing import Dict, Any, Set, List
+import xml.etree.ElementTree as ET
+from typing import Dict, Any, List
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sigma.collection import SigmaCollection
 from sigma.exceptions import SigmaError
@@ -16,25 +17,12 @@ logger = logging.getLogger(__name__)
 SIGMA_DIR: str = "rules/sigma"
 BUILD_DIR: str = "build/wazuh"
 TEMPLATE_DIR: str = "templates"
-ID_REGISTRY_FILE: str = "id_registry.json"
-
-os.makedirs(BUILD_DIR, exist_ok=True)
 
 env: Environment = Environment(
     loader=FileSystemLoader(TEMPLATE_DIR),
     autoescape=select_autoescape(['xml', 'j2'])
 )
 template = env.get_template('wazuh_rule.xml.j2')
-
-def load_id_registry() -> Dict[str, str]:
-    if os.path.exists(ID_REGISTRY_FILE):
-        with open(ID_REGISTRY_FILE, 'r') as f:
-            return json.load(f)
-    return {}
-
-def save_id_registry(registry: Dict[str, str]) -> None:
-    with open(ID_REGISTRY_FILE, 'w') as f:
-        json.dump(registry, f, indent=4, sort_keys=True)
 
 def map_wazuh_level(sigma_level: str) -> int:
     mapping: Dict[str, int] = {'informational': 3, 'low': 5, 'medium': 7, 'high': 10, 'critical': 12}
@@ -119,9 +107,12 @@ def main() -> None:
         logger.error(f"CRITICAL: Directory {SIGMA_DIR} not found. Halting build.")
         sys.exit(1)
 
-    registry = load_id_registry()
-    used_wazuh_ids: Set[str] = set(registry.values())
-    auto_id_counter: int = 100000
+    # --- THE DIRTY BUILD DIRECTORY FIX ---
+    if os.path.exists(BUILD_DIR):
+        logger.info(f"Purging existing build directory: {BUILD_DIR}")
+        shutil.rmtree(BUILD_DIR)
+    os.makedirs(BUILD_DIR, exist_ok=True)
+    # -------------------------------------
 
     count: int = 0
     skipped: int = 0
@@ -159,14 +150,14 @@ def main() -> None:
                 tags: List[str] = [str(tag.name) for tag in rule.tags] if rule.tags else []
                 level: str = str(rule.level.name) if rule.level else 'low'
 
-                if rule_uuid in registry:
-                    wazuh_id = registry[rule_uuid]
-                else:
-                    while str(auto_id_counter) in used_wazuh_ids:
-                        auto_id_counter += 1
-                    wazuh_id = str(auto_id_counter)
-                    registry[rule_uuid] = wazuh_id
-                    used_wazuh_ids.add(wazuh_id)
+                # --- THE SINGLE SOURCE OF TRUTH FIX ---
+                if 'wazuh_id' not in rule.custom_attributes:
+                    logger.error(f"Validation Error: Rule '{rule.title}' ({rule_uuid}) is missing the required 'wazuh_id' attribute.")
+                    skipped += 1
+                    continue
+
+                wazuh_id = str(rule.custom_attributes['wazuh_id'])
+                # --------------------------------------
 
                 xml_content: str = template.render(
                     product=product,
@@ -180,6 +171,16 @@ def main() -> None:
                     tags=tags
                 )
 
+                # --- THE XML VALIDATION FIX ---
+                try:
+                    import xml.etree.ElementTree as ET
+                    ET.fromstring(xml_content)
+                except ET.ParseError as e:
+                    logger.error(f"Validation Error: Template generated malformed XML for rule '{rule.title}' ({rule_uuid}). Reason: {e}")
+                    skipped += 1
+                    continue
+                # ------------------------------
+
                 out_filename: str = filename.replace('.yml', '.xml').replace('.yaml', '.xml')
                 with open(os.path.join(BUILD_DIR, out_filename), 'w') as out_f:
                     out_f.write(xml_content)
@@ -188,12 +189,15 @@ def main() -> None:
 
     logger.info(f"Successfully compiled {count} rules. Skipped {skipped} rules.")
 
-    if yaml_files_found > 0 and count == 0:
-        logger.error("CRITICAL: Rules exist, but 0 were successfully compiled. Failing build.")
+    # --- STRICT COMPILATION SAFEGUARD ---
+    if skipped > 0:
+        logger.error(f"CRITICAL: {skipped} rule(s) failed compilation. Halting build to prevent partial deployment and accidental rule deletion.")
         sys.exit(1)
 
-    # State is only saved if the compilation didn't fatally abort on an empty build
-    save_id_registry(registry)
+    if count == 0:
+        logger.error("CRITICAL: No rules were compiled. Failing build to prevent wiping the SIEM.")
+        sys.exit(1)
+    # ------------------------------------
 
 if __name__ == "__main__":
     main()
