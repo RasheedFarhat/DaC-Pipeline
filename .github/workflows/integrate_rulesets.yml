@@ -7,6 +7,9 @@ on:
     paths:
       - 'rules/**.yml'
       - 'rules/**.yaml'
+      - 'scripts/**.py'
+      - 'templates/**.j2'
+      - 'configs/**.conf'
 
 # CI HARDENING: Prevent concurrent deployments from stepping on each other
 concurrency:
@@ -20,10 +23,10 @@ permissions:
 jobs:
   deploy-rules:
     runs-on: ubuntu-latest
-    
+
     # CI HARDENING: Tie this job to a protected GitHub Environment
     environment: production
-    
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4

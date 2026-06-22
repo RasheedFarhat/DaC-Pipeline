@@ -1,0 +1,67 @@
+name: PR Deployment Dry-Run
+
+on:
+  pull_request:
+    branches: [ main, dev ]
+    paths:
+      - 'rules/**.yml'
+      - 'rules/**.yaml'
+      - 'scripts/**.py'
+      - 'templates/**.j2'
+      - 'configs/**.conf'
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  dry-run-comment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Compile Rules
+        run: python scripts/compile_sigma.py
+
+      - name: Execute Dry Run
+        id: dry_run
+        env:
+          WAZUH_API_URL: ${{ secrets.WAZUH_API_URL }}
+          WAZUH_USER: ${{ secrets.WAZUH_USER }}
+          WAZUH_PASSWORD: ${{ secrets.WAZUH_PASSWORD }}
+        run: |
+          OUTPUT=$(python scripts/deploy_rule.py --dry-run 2>&1)
+
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "DRY_RUN_OUTPUT<<$EOF" >> $GITHUB_ENV
+          echo "$OUTPUT" >> $GITHUB_ENV
+          echo "$EOF" >> $GITHUB_ENV
+
+      - name: Post Comment to PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          COMMENT_BODY="###  Deployment Dry-Run Results
+
+          <details>
+          <summary>Click to view what will happen when this PR is merged</summary>
+
+          \`\`\`text
+          ${{ env.DRY_RUN_OUTPUT }}
+          \`\`\`
+
+          </details>"
+
+          gh pr comment ${{ github.event.pull_request.number }} -b "$COMMENT_BODY"

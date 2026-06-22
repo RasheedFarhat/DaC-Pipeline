@@ -4,22 +4,23 @@ import xml.etree.ElementTree as ET
 import yaml
 import logging
 
-# --- Logging Configuration ---
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
-# -----------------------------
 
 SIGMA_DIR = "rules/sigma"
 BUILD_DIR = "build/wazuh"
 
+def build_has_xml(directory: str) -> bool:
+    """Recursively checks if at least one XML file exists in the directory."""
+    for _, _, files in os.walk(directory):
+        if any(f.endswith('.xml') for f in files):
+            return True
+    return False
+
 def validate_pipeline(directories):
     if isinstance(directories, str):
         directories = [directories]
-        
+
     sigma_files = []
     xml_files = []
 
@@ -34,6 +35,10 @@ def validate_pipeline(directories):
                     xml_files.append(os.path.join(root, file))
 
     errors = []
+
+    if sigma_files and not xml_files:
+        errors.append("[!] CRITICAL: Sigma YAML files exist, but no Wazuh XML files were found to validate.")
+
     sigma_uuids = set()
     wazuh_ids = {}
 
@@ -56,7 +61,7 @@ def validate_pipeline(directories):
             for rule in root.findall('.//rule'):
                 rule_id = rule.get('id')
                 info_tag = rule.find(".//info[@type='sigma_uuid']")
-                
+
                 if rule_id:
                     try:
                         rule_id_int = int(rule_id)
@@ -86,14 +91,19 @@ def validate_pipeline(directories):
     return errors
 
 def main():
-    logger.info(f"Starting Strict Validation & Correspondence Check in '{SIGMA_DIR}' and '{BUILD_DIR}'...")
-    
-    if not os.path.exists(SIGMA_DIR) and not os.path.exists(BUILD_DIR):
-        logger.error("Rule directories not found. Exiting.")
-        sys.exit(0)
+    logger.info(f"Starting Strict Validation & Correspondence Check...")
+
+    if not os.path.exists(SIGMA_DIR):
+        logger.error("CRITICAL: Sigma rule directory missing.")
+        sys.exit(1)
+
+    # Use recursive check so subdirectories aren't falsely flagged as empty
+    if not os.path.exists(BUILD_DIR) or not build_has_xml(BUILD_DIR):
+        logger.error("CRITICAL: Build directory empty or missing. Did compile_sigma.py run?")
+        sys.exit(1)
 
     errors = validate_pipeline([SIGMA_DIR, BUILD_DIR])
-    
+
     if errors:
         logger.error("CI/CD Pipeline halted. Validation failed with the following errors:")
         for error in errors:
