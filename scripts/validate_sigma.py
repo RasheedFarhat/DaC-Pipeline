@@ -29,9 +29,10 @@ def run_pysigma_validation(target_dir=SIGMA_DIR):
 
 def main():
     if not os.path.exists(SIGMA_DIR):
-        logger.error(f"Directory {SIGMA_DIR} not found. Exiting.")
-        sys.exit(0)
-        
+        logger.error(f"CRITICAL: Directory {SIGMA_DIR} not found. Halting validation.")
+        # BUG 5 FIX: Exit 1 instead of 0
+        sys.exit(1)
+
     errors = run_pysigma_validation()
     if errors:
         logger.error("CI/CD Pipeline halted. Sigma validation failed:")
