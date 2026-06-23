@@ -21,29 +21,29 @@ permissions:
 
 jobs:
   deploy-rules:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     environment: production
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Virtual Environment & Install Dependencies
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
         run: |
-          /usr/bin/python3 -m venv ci_venv
-          source ci_venv/bin/activate
-          python3 -m pip install --upgrade pip
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Build XML Artifacts (The Missing Compiler)
-        run: |
-          source ci_venv/bin/activate
-          python3 scripts/compile_sigma.py
+      - name: Build XML Artifacts
+        run: python scripts/compile_sigma.py
 
-      - name: Deploy to Wazuh API
+      - name: Deploy to Wazuh API (Dry Run)
         env:
           WAZUH_API_URL: ${{ secrets.WAZUH_API_URL }}
           WAZUH_USER: ${{ secrets.WAZUH_USER }}
           WAZUH_PASSWORD: ${{ secrets.WAZUH_PASSWORD }}
-        run: |
-          source ci_venv/bin/activate
-          python3 scripts/deploy_rule.py
+        run: python scripts/deploy_rule.py --dry-run
