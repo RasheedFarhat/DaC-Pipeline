@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   deploy-rules:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     # CI HARDENING: Tie this job to a protected GitHub Environment
     environment: production
