@@ -1,28 +1,20 @@
-name: Deploy Rules to Wazuh (Production)
+name: CI Pipeline (Build & Validate)
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main, dev ]
     paths:
       - 'rules/**.yml'
       - 'rules/**.yaml'
       - 'scripts/**.py'
       - 'templates/**.j2'
-      - 'configs/**.conf'
-  workflow_dispatch:
-
-concurrency:
-  group: production-deployment
-  cancel-in-progress: false
-
-permissions:
-  contents: read
+      - 'pipeline.yaml'
+  pull_request:
+    branches: [ main, dev ]
 
 jobs:
-  deploy-rules:
+  build-and-test:
     runs-on: ubuntu-latest
-    environment: production
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -38,12 +30,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Build XML Artifacts
+      - name: Run Tests
+        run: pytest tests/ -v --tb=short
+
+      - name: Validate Sigma Syntax
+        run: python scripts/validate_sigma.py
+
+      - name: Compile Rules
         run: python scripts/compile_sigma.py
 
-      - name: Deploy to Wazuh API (Dry Run)
-        env:
-          WAZUH_API_URL: ${{ secrets.WAZUH_API_URL }}
-          WAZUH_USER: ${{ secrets.WAZUH_USER }}
-          WAZUH_PASSWORD: ${{ secrets.WAZUH_PASSWORD }}
-        run: python scripts/deploy_rule.py --dry-run
+      - name: Validate Rule IDs
+        run: python scripts/check_rule_ids.py
+
+      - name: Upload Compiled Rules Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wazuh-xml-rules
+          path: build/wazuh/
+          retention-days: 7
