@@ -1,24 +1,44 @@
 import os
 import re
 import sys
+import yaml
+import json
 import shutil
 import logging
-import xml.etree.ElementTree as ET
 from typing import Dict, Any, List
+import xml.etree.ElementTree as ET
+
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sigma.collection import SigmaCollection
 from sigma.exceptions import SigmaError
 from sigma.rule import SigmaRule
+from sigma.conditions import ConditionOR, ConditionAND, ConditionNOT
 
 # --- Logging Configuration ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
 
-SIGMA_DIR: str = "rules/sigma"
-BUILD_DIR: str = "build/wazuh"
-TEMPLATE_DIR: str = "templates"
+REGISTRY_FILE = "id_registry.json"
 
-env: Environment = Environment(
+def load_config() -> Dict[str, str]:
+    try:
+        with open("pipeline.yaml", "r") as f:
+            config = yaml.safe_load(f)
+            return {
+                "sigma_dir": config.get("build", {}).get("sigma_dir", "rules/sigma"),
+                "wazuh_dir": config.get("build", {}).get("wazuh_dir", "build/wazuh"),
+                "template_dir": config.get("build", {}).get("template_dir", "templates")
+            }
+    except FileNotFoundError:
+        logger.warning("pipeline.yaml not found, falling back to defaults.")
+        return {"sigma_dir": "rules/sigma", "wazuh_dir": "build/wazuh", "template_dir": "templates"}
+
+CONFIG = load_config()
+SIGMA_DIR = CONFIG["sigma_dir"]
+BUILD_DIR = CONFIG["wazuh_dir"]
+TEMPLATE_DIR = CONFIG["template_dir"]
+
+env = Environment(
     loader=FileSystemLoader(TEMPLATE_DIR),
     autoescape=select_autoescape(['xml', 'j2'])
 )
@@ -38,67 +58,88 @@ def get_parent_group(service: str, category: str = '', product: str = '') -> str
         return 'syscheck'
     return 'syslog'
 
-def process_modifiers(values: List[Any], modifiers: List[str]) -> str:
-    raw_vals = []
-    for v in values:
-        if hasattr(v, 'to_plain'):
-            raw_vals.append(v.to_plain())
-        else:
-            raw_vals.append(str(v))
+def evaluate_ast(node: Any, rule: SigmaRule) -> List[Dict[str, str]]:
+    """Recursively walks the Sigma AST."""
+    if isinstance(node, ConditionOR):
+        result = []
+        for arg in node.args:
+            result.extend(evaluate_ast(arg, rule))
+        return result
 
-    # Strip wildcards pySigma pre-embeds via contains modifier before escaping
-    if 'all' in modifiers:
-        stripped_vals = [v.strip('*') for v in raw_vals]
-        escaped_vals = [re.escape(v) for v in stripped_vals]
-        if 'endswith' in modifiers:
-            return "".join([f"(?=.*{v}$)" for v in escaped_vals])
-        elif 'startswith' in modifiers:
-            return "".join([f"(?=^{v})" for v in escaped_vals])
-        else:
-            return "".join([f"(?=.*{v})" for v in escaped_vals])
+    elif isinstance(node, ConditionAND):
+        import itertools
+        args_eval = [evaluate_ast(arg, rule) for arg in node.args]
+        result = []
+        for combo in itertools.product(*args_eval):
+            merged: Dict[str, str] = {}
+            for d in combo:
+                for k, v in d.items():
+                    if k in merged:
+                        merged[k] = f"(?=.*{merged[k]})(?=.*{v})"
+                    else:
+                        merged[k] = v
+            result.append(merged)
+        return result
 
-    # Non-all path: keep wildcards, escape and convert
-    escaped_vals = [re.escape(v).replace('\\*', '.*') for v in raw_vals]
-    if 'endswith' in modifiers:
-        escaped_vals = [f"{v}$" for v in escaped_vals]
-    elif 'startswith' in modifiers:
-        escaped_vals = [f"^{v}" for v in escaped_vals]
+    elif isinstance(node, ConditionNOT):
+        child_evals = evaluate_ast(node.args[0], rule)
+        return [{k: f"(?!.*{v})" for k, v in d.items()} for d in child_evals]
 
-    if len(escaped_vals) > 1:
-        return f"({'|'.join(escaped_vals)})"
-    return escaped_vals[0]
+    else:
+        identifier = getattr(node, 'identifier', None) or getattr(node, 'name', str(node))
+        name = str(identifier).replace('ConditionItem(', '').replace(')', '').strip()
 
-def extract_fields_from_rule(rule: SigmaRule) -> Dict[str, str]:
-    fields: Dict[str, List[str]] = {}
+        detection = rule.detection.detections.get(name)
+        if not detection:
+            return [{}]
 
-    for detection_name, detection in rule.detection.detections.items():
+        fields: Dict[str, str] = {}
         for item in detection.detection_items:
             if not item.field:
                 continue
 
-            wazuh_field: str = item.field
+            wazuh_field = item.field
             if wazuh_field == "CommandLine": wazuh_field = "win.eventdata.commandLine"
             elif wazuh_field == "Image": wazuh_field = "win.eventdata.image"
             elif wazuh_field == "file": wazuh_field = "syscheck.path"
 
             modifiers = [(m.__name__ if hasattr(m, '__name__') else m.__class__.__name__).lower().replace('sigma', '').replace('modifier', '') for m in item.modifiers] if item.modifiers else []
-            compiled_val = process_modifiers(item.value, modifiers)
 
-            if wazuh_field not in fields:
-                fields[wazuh_field] = []
-            fields[wazuh_field].append(compiled_val)
+            raw_vals = [v.to_plain() if hasattr(v, 'to_plain') else str(v) for v in item.value]
 
-    final_fields: Dict[str, str] = {}
-    for field, compiled_vals in fields.items():
-        if len(compiled_vals) > 1:
-            final_val = "".join([f"(?=.*{v})" if not v.startswith('(?=') else v for v in compiled_vals])
-        else:
-            final_val = compiled_vals[0]
+            escaped_vals = []
+            for v in raw_vals:
+                if 'all' in modifiers:
+                    escaped_vals.append(re.escape(v.strip('*')))
+                else:
+                    escaped_vals.append(re.escape(v).replace('\\*', '.*'))
 
-        # Final safety check for cross-field AND combinations
-        final_fields[field] = final_val.replace('.*.*', '.*')
+            if 'endswith' in modifiers:
+                mapped_vals = [f"{v}$" for v in escaped_vals]
+            elif 'startswith' in modifiers:
+                mapped_vals = [f"^{v}" for v in escaped_vals]
+            else:
+                mapped_vals = escaped_vals
 
-    return final_fields
+            compiled_val = f"({'|'.join(mapped_vals)})" if len(mapped_vals) > 1 else mapped_vals[0]
+
+            if wazuh_field in fields:
+                fields[wazuh_field] = f"(?=.*{fields[wazuh_field]})(?=.*{compiled_val})"
+            else:
+                fields[wazuh_field] = compiled_val
+
+        return [fields]
+
+def load_registry() -> Dict[str, str]:
+    try:
+        with open(REGISTRY_FILE, 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
+
+def save_registry(registry: Dict[str, str]):
+    with open(REGISTRY_FILE, 'w') as f:
+        json.dump(registry, f, indent=4, sort_keys=True)
 
 def main() -> None:
     logger.info("Starting pySigma Compilation to Wazuh XML...")
@@ -107,27 +148,28 @@ def main() -> None:
         logger.error(f"CRITICAL: Directory {SIGMA_DIR} not found. Halting build.")
         sys.exit(1)
 
-    # --- THE DIRTY BUILD DIRECTORY FIX ---
     if os.path.exists(BUILD_DIR):
         logger.info(f"Purging existing build directory: {BUILD_DIR}")
         shutil.rmtree(BUILD_DIR)
     os.makedirs(BUILD_DIR, exist_ok=True)
-    # -------------------------------------
 
-    count: int = 0
-    skipped: int = 0
-    yaml_files_found: int = 0
+    # Load ID Registry and find next available ID
+    registry = load_registry()
+    existing_ids = [int(v) for v in registry.values() if str(v).isdigit()]
+    next_id = max(existing_ids) + 1 if existing_ids else 100000
+
+    count = 0
+    skipped = 0
+    registry_updated = False
 
     for root_dir, _, files in os.walk(SIGMA_DIR):
         for filename in sorted(files):
             if not filename.endswith(('.yml', '.yaml')):
                 continue
 
-            yaml_files_found += 1
-            filepath: str = os.path.join(root_dir, filename)
-
+            filepath = os.path.join(root_dir, filename)
             with open(filepath, 'r') as f:
-                yaml_content: str = f.read()
+                yaml_content = f.read()
 
             try:
                 collection = SigmaCollection.from_yaml(yaml_content)
@@ -137,67 +179,75 @@ def main() -> None:
                 continue
 
             for rule in collection.rules:
-                if not isinstance(rule, SigmaRule):
+                # WE DELETED THE HARDCODED WAZUH_ID CHECK HERE!
+
+                try:
+                    rule_fields_list = evaluate_ast(rule.detection.parsed_condition[0].parsed, rule)
+                except Exception as e:
+                    logger.error(f"Failed to compile AST logic for {rule.id}: {e}")
                     skipped += 1
                     continue
 
-                fields: Dict[str, str] = extract_fields_from_rule(rule)
+                service = str(rule.logsource.service) if rule.logsource and rule.logsource.service else ''
+                category = str(rule.logsource.category) if rule.logsource and rule.logsource.category else ''
+                product = str(rule.logsource.product) if rule.logsource and rule.logsource.product else ''
+
                 rule_uuid = str(rule.id)
 
-                service: str = str(rule.logsource.service) if rule.logsource and rule.logsource.service else ''
-                category: str = str(rule.logsource.category) if rule.logsource and rule.logsource.category else ''
-                product: str = str(rule.logsource.product) if rule.logsource and rule.logsource.product else ''
-                tags: List[str] = [str(tag.name) for tag in rule.tags] if rule.tags else []
-                level: str = str(rule.level.name) if rule.level else 'low'
+                for idx, fields in enumerate(rule_fields_list):
+                    # Deterministic Key: 'UUID' for the first rule, 'UUID_1', 'UUID_2' for splits
+                    registry_key = rule_uuid if idx == 0 else f"{rule_uuid}_{idx}"
 
-                # --- THE SINGLE SOURCE OF TRUTH FIX ---
-                if 'wazuh_id' not in rule.custom_attributes:
-                    logger.error(f"Validation Error: Rule '{rule.title}' ({rule_uuid}) is missing the required 'wazuh_id' attribute.")
-                    skipped += 1
-                    continue
+                    # Auto-assign ID from registry or generate a new one
+                    if registry_key in registry:
+                        current_wazuh_id = str(registry[registry_key])
+                    else:
+                        current_wazuh_id = str(next_id)
+                        registry[registry_key] = current_wazuh_id
+                        next_id += 1
+                        registry_updated = True
 
-                wazuh_id = str(rule.custom_attributes['wazuh_id'])
-                # --------------------------------------
+                    xml_content = template.render(
+                        product=product,
+                        service=service,
+                        rule_id=rule_uuid,
+                        wazuh_id=current_wazuh_id,
+                        wazuh_level=map_wazuh_level(str(rule.level.name) if rule.level else 'low'),
+                        parent_group=get_parent_group(service, category, product),
+                        fields=fields,
+                        title=f"{rule.title} (Part {idx+1})" if len(rule_fields_list) > 1 else rule.title,
+                        tags=[str(tag.name) for tag in rule.tags] if rule.tags else []
+                    )
 
-                xml_content: str = template.render(
-                    product=product,
-                    service=service,
-                    rule_id=rule_uuid,
-                    wazuh_id=wazuh_id,
-                    wazuh_level=map_wazuh_level(level),
-                    parent_group=get_parent_group(service, category, product),
-                    fields=fields,
-                    title=rule.title,
-                    tags=tags
-                )
+                    try:
+                        ET.fromstring(xml_content)
+                    except ET.ParseError as e:
+                        logger.error(f"Malformed XML for rule '{rule.title}'. Reason: {e}")
+                        skipped += 1
+                        continue
 
-                # --- THE XML VALIDATION FIX ---
-                try:
-                    import xml.etree.ElementTree as ET
-                    ET.fromstring(xml_content)
-                except ET.ParseError as e:
-                    logger.error(f"Validation Error: Template generated malformed XML for rule '{rule.title}' ({rule_uuid}). Reason: {e}")
-                    skipped += 1
-                    continue
-                # ------------------------------
+                    base_name = filename.replace('.yml', '').replace('.yaml', '')
+                    out_filename = f"{base_name}_{current_wazuh_id}.xml"
 
-                out_filename: str = filename.replace('.yml', '.xml').replace('.yaml', '.xml')
-                with open(os.path.join(BUILD_DIR, out_filename), 'w') as out_f:
-                    out_f.write(xml_content)
+                    with open(os.path.join(BUILD_DIR, out_filename), 'w') as out_f:
+                        out_f.write(xml_content)
 
-                count += 1
+                    count += 1
+
+    # Save the registry if we added new IDs
+    if registry_updated:
+        save_registry(registry)
+        logger.info("Updated id_registry.json with new rule IDs.")
 
     logger.info(f"Successfully compiled {count} rules. Skipped {skipped} rules.")
 
-    # --- STRICT COMPILATION SAFEGUARD ---
     if skipped > 0:
-        logger.error(f"CRITICAL: {skipped} rule(s) failed compilation. Halting build to prevent partial deployment and accidental rule deletion.")
+        logger.error(f"CRITICAL: {skipped} rule(s) failed compilation. Halting build.")
         sys.exit(1)
 
     if count == 0:
-        logger.error("CRITICAL: No rules were compiled. Failing build to prevent wiping the SIEM.")
+        logger.error("CRITICAL: No rules were compiled. Failing build.")
         sys.exit(1)
-    # ------------------------------------
 
 if __name__ == "__main__":
     main()
