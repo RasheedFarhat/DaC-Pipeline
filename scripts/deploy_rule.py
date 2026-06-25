@@ -102,8 +102,10 @@ def deploy_rules(token: str, settings: Settings, tls_verify: Union[bool, str], d
         logger.error(f"CRITICAL: Directory {settings.wazuh_dir} not found. Did the compiler run?")
         sys.exit(1)
 
+    # THE FIX: Added Content-Type so Wazuh accepts the XML payload
     headers: Dict[str, str] = {
-        'Authorization': f'Bearer {token}'
+        'Authorization': f'Bearer {token}',
+        'Content-Type': 'application/octet-stream'
     }
     success: bool = True
 
