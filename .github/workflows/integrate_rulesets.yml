@@ -4,54 +4,46 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
-
     paths:
       - 'rules/**.yml'
       - 'rules/**.yaml'
       - 'scripts/**.py'
       - 'templates/**.j2'
       - 'configs/**.conf'
+  workflow_dispatch:
 
-# CI HARDENING: Prevent concurrent deployments from stepping on each other
 concurrency:
   group: production-deployment
   cancel-in-progress: false
 
-# CI HARDENING: Principle of least privilege for the GitHub token
 permissions:
   contents: read
 
 jobs:
   deploy-rules:
-    runs-on: self-hosted
-
-    # CI HARDENING: Tie this job to a protected GitHub Environment
+    runs-on: ubuntu-latest
     environment: production
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Python 3.11
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip' # CI HARDENING: Cache dependencies to speed up the build
+          cache: 'pip'
 
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Build XML Artifacts (The Missing Compiler)
+      - name: Build XML Artifacts
         run: python scripts/compile_sigma.py
 
-      - name: Deploy to Wazuh API
+      - name: Deploy to Wazuh API (Dry Run)
         env:
           WAZUH_API_URL: ${{ secrets.WAZUH_API_URL }}
           WAZUH_USER: ${{ secrets.WAZUH_USER }}
           WAZUH_PASSWORD: ${{ secrets.WAZUH_PASSWORD }}
-          # Note: If prod uses an internal PKI, you would pass the cert here:
-          # WAZUH_CA_BUNDLE: ${{ secrets.WAZUH_CA_BUNDLE }}
-        run: python scripts/deploy_rule.py
+        run: python scripts/deploy_rule.py --dry-run
