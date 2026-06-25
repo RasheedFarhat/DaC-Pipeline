@@ -5,3 +5,4 @@ build/wazuh/
 __pycache__/
 *.pyc
 .env
+.secrets
