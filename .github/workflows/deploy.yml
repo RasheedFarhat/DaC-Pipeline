@@ -1,20 +1,12 @@
-name: CI Pipeline (Build & Validate)
+name: CD Pipeline (Production Deploy)
 
 on:
-  push:
-    branches: [ main, dev ]
-    paths:
-      - 'rules/**.yml'
-      - 'rules/**.yaml'
-      - 'scripts/**.py'
-      - 'templates/**.j2'
-      - 'pipeline.yaml'
-  pull_request:
-    branches: [ main, dev ]
+  workflow_dispatch:
 
 jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
+  deploy:
+    runs-on: self-hosted
+    environment: production
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -33,8 +25,8 @@ jobs:
       - name: Run Tests
         run: pytest tests/ -v --tb=short
 
-      - name: Validate Sigma Syntax
-        run: python scripts/validate_sigma.py
+      - name: Validate Sigma Rules
+        run: python scripts/validate_sigma.py rules/sigma/
 
       - name: Compile Rules
         run: python scripts/compile_sigma.py
@@ -42,9 +34,9 @@ jobs:
       - name: Validate Rule IDs
         run: python scripts/check_rule_ids.py
 
-      - name: Upload Compiled Rules Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: wazuh-xml-rules
-          path: build/wazuh/
-          retention-days: 7
+      - name: Deploy to Wazuh API
+        env:
+          WAZUH_API_URL: ${{ secrets.WAZUH_API_URL }}
+          WAZUH_USER: ${{ secrets.WAZUH_USER }}
+          WAZUH_PASSWORD: ${{ secrets.WAZUH_PASSWORD }}
+        run: python scripts/deploy_rule.py
