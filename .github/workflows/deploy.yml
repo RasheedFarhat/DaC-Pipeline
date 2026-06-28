@@ -34,5 +34,5 @@ jobs:
           WAZUH_API_URL: ${{ secrets.WAZUH_API_URL }}
           WAZUH_USER: ${{ secrets.WAZUH_USER }}
           WAZUH_PASSWORD: ${{ secrets.WAZUH_PASSWORD }}
-          WAZUH_INSECURE: ${{ secrets.WAZUH_INSECURE }}
+          WAZUH_VERIFY_TLS: ${{ secrets.WAZUH_VERIFY_TLS }}
         run: venv/bin/python3 scripts/deploy_rule.py
