@@ -1,6 +1,6 @@
 .PHONY: test compile validate ci clean all
 
-PYTHON = /Users/rasheedfarhat/DaC-Pipeline/venv/bin/python3
+PYTHON = venv/bin/python3
 
 test:
 	$(PYTHON) -m pytest tests/ -v --tb=short

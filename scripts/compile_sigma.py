@@ -94,13 +94,15 @@ def evaluate_ast(node: Any, rule: SigmaRule) -> List[Dict[str, str]]:
             return [{}]
 
         field = node.field
-        wazuh_field = field
-        if field == "CommandLine":
-            wazuh_field = "win.eventdata.commandLine"
-        elif field == "Image":
-            wazuh_field = "win.eventdata.image"
-        elif field == "file":
-            wazuh_field = "syscheck.path"
+        FIELD_MAPPINGS = {
+            "CommandLine": "win.eventdata.commandLine",
+            "Image": "win.eventdata.image",
+            "file": "syscheck.path",
+            "DestinationPort": "win.eventdata.destinationPort",
+            "TargetObject": "win.eventdata.targetObject",
+            "SourceIp": "win.eventdata.sourceIp",
+        }
+        wazuh_field = FIELD_MAPPINGS.get(field, field)
 
         parts = []
         for part in node.value:
