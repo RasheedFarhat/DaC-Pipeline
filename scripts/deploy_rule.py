@@ -4,7 +4,7 @@ import requests
 import logging
 import argparse
 import yaml
-from typing import Any, Dict, Set, Optional, Union, List
+from typing import Any, Dict, Set, Optional, Union, List, Tuple
 from pydantic import Field, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception, before_sleep_log
@@ -80,6 +80,29 @@ def safe_api_request(method: str, url: str, **kwargs: Any) -> requests.Response:
     response.raise_for_status()
     return response
 
+def authed_request(
+    method: str, url: str, settings: "Settings", tls_verify: Union[bool, str], token: str, **kwargs: Any
+) -> Tuple[requests.Response, str]:
+    """Issue an authenticated Wazuh API request, re-authenticating once on 401.
+
+    The Wazuh JWT is short-lived (15 min by default), so a long deploy can outlive
+    its token. On a 401 we re-authenticate exactly once and retry the call. The
+    (possibly refreshed) token is returned alongside the response so callers can
+    reuse it for later requests instead of forcing another round-trip. A second 401
+    after re-auth is propagated rather than retried again.
+    """
+    headers: Dict[str, str] = dict(kwargs.pop("headers", {}))
+    headers["Authorization"] = f"Bearer {token}"
+    try:
+        return safe_api_request(method, url, headers=headers, verify=tls_verify, **kwargs), token
+    except requests.exceptions.HTTPError as e:
+        if token == "OFFLINE_DRY_RUN_TOKEN" or e.response is None or e.response.status_code != 401:
+            raise
+        logger.warning("Wazuh API returned 401 (token likely expired). Re-authenticating once and retrying.")
+        token = get_token(settings, tls_verify)
+        headers["Authorization"] = f"Bearer {token}"
+        return safe_api_request(method, url, headers=headers, verify=tls_verify, **kwargs), token
+
 # THE FIX: Added dry_run parameter and offline token fallback
 def get_token(settings: Settings, tls_verify: Union[bool, str], dry_run: bool = False) -> str:
     logger.info("Authenticating to the Wazuh API...")
@@ -142,14 +165,11 @@ def deploy_rules(token: str, settings: Settings, tls_verify: Union[bool, str], d
         logger.info(f"[DRY RUN] Would deploy {len(xml_files)} rules bundled as {BUNDLE_FILENAME}")
         return True
 
-    headers: Dict[str, str] = {
-        'Authorization': f'Bearer {token}',
-        'Content-Type': 'application/octet-stream'
-    }
+    headers: Dict[str, str] = {'Content-Type': 'application/octet-stream'}
 
     url = f"{settings.wazuh_api_url}/rules/files/{BUNDLE_FILENAME}"
     try:
-        safe_api_request('PUT', url, headers=headers, data=bundled_xml, verify=tls_verify)
+        authed_request('PUT', url, settings, tls_verify, token, headers=headers, data=bundled_xml)
         logger.info(f"Successfully deployed {len(xml_files)} rules as {BUNDLE_FILENAME}")
     except requests.exceptions.RequestException as e:
         logger.error(f"ERROR: Network or API failure deploying bundle: {e}")
@@ -167,7 +187,7 @@ def reconcile_state(token: str, settings: Settings, tls_verify: Union[bool, str]
 
     IGNORE_FILES: Set[str] = {"local_rules.xml"}
     try:
-        response: requests.Response = safe_api_request('GET', f"{settings.wazuh_api_url}/rules/files", headers={'Authorization': f'Bearer {token}'}, verify=tls_verify)
+        response, token = authed_request('GET', f"{settings.wazuh_api_url}/rules/files", settings, tls_verify, token)
         resp_json: Dict[str, Any] = response.json()
 
         remote_custom_files: Set[str] = set()
@@ -216,7 +236,7 @@ def reconcile_state(token: str, settings: Settings, tls_verify: Union[bool, str]
             if dry_run:
                 logger.info(f"[DRY RUN] Would DELETE orphaned rule: {filename}")
             else:
-                safe_api_request('DELETE', f"{settings.wazuh_api_url}/rules/files/{filename}", headers={'Authorization': f'Bearer {token}'}, verify=tls_verify)
+                _resp, token = authed_request('DELETE', f"{settings.wazuh_api_url}/rules/files/{filename}", settings, tls_verify, token)
                 logger.info(f"Deleted orphaned rule: {filename}")
     except requests.exceptions.RequestException as e:
         logger.error(f"Error during state reconciliation (Network/API): {e}")
@@ -239,13 +259,12 @@ def deploy_agent_conf(token: str, settings: Settings, tls_verify: Union[bool, st
     url: str = f"{settings.wazuh_api_url}/groups/{settings.target_group}/configuration"
 
     headers: Dict[str, str] = {
-        'Authorization': f'Bearer {token}',
         'Content-Type': 'application/xml',
         'Accept': 'application/json'
     }
 
     try:
-        safe_api_request('PUT', url, headers=headers, data=conf_content, verify=tls_verify)
+        authed_request('PUT', url, settings, tls_verify, token, headers=headers, data=conf_content)
         logger.info("Successfully deployed agent.conf")
     except requests.exceptions.RequestException as e:
         logger.error(f"Error deploying agent.conf (Network/API): {e}")
@@ -253,9 +272,8 @@ def deploy_agent_conf(token: str, settings: Settings, tls_verify: Union[bool, st
 def restart_manager(token: str, settings: Settings, tls_verify: Union[bool, str]) -> None:
     logger.info("Restarting Wazuh Manager to apply changes...")
     url: str = f"{settings.wazuh_api_url}/manager/restart"
-    headers: Dict[str, str] = {'Authorization': f'Bearer {token}'}
     try:
-        safe_api_request('PUT', url, headers=headers, verify=tls_verify)
+        authed_request('PUT', url, settings, tls_verify, token)
         logger.info("Restart command issued successfully.")
     except requests.exceptions.RequestException as e:
         logger.error(f"CRITICAL: Network/HTTP error restarting manager: {e}")
