@@ -11,25 +11,28 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Create virtual environment
+        run: python3.11 -m venv venv
+
       - name: Install Dependencies
-        run: /Users/rasheedfarhat/DaC-Pipeline/venv/bin/pip install -r requirements.txt
+        run: venv/bin/pip install -r requirements.txt
 
       - name: Run Tests
-        run: /Users/rasheedfarhat/DaC-Pipeline/venv/bin/python3 -m pytest tests/ -v --tb=short
+        run: venv/bin/python3 -m pytest tests/ -v --tb=short
 
       - name: Validate Sigma Rules
-        run: /Users/rasheedfarhat/DaC-Pipeline/venv/bin/python3 scripts/validate_sigma.py
+        run: venv/bin/python3 scripts/validate_sigma.py
 
       - name: Compile Rules
-        run: /Users/rasheedfarhat/DaC-Pipeline/venv/bin/python3 scripts/compile_sigma.py
+        run: venv/bin/python3 scripts/compile_sigma.py
 
       - name: Validate Rule IDs
-        run: /Users/rasheedfarhat/DaC-Pipeline/venv/bin/python3 scripts/check_rule_ids.py
+        run: venv/bin/python3 scripts/check_rule_ids.py
 
       - name: Deploy to Wazuh API
         env:
           WAZUH_API_URL: ${{ secrets.WAZUH_API_URL }}
           WAZUH_USER: ${{ secrets.WAZUH_USER }}
           WAZUH_PASSWORD: ${{ secrets.WAZUH_PASSWORD }}
-          WAZUH_INSECURE: ${{ secrets.WAZUH_INSECURE }}
-        run: /Users/rasheedfarhat/DaC-Pipeline/venv/bin/python3 scripts/deploy_rule.py
+          WAZUH_VERIFY_TLS: ${{ secrets.WAZUH_VERIFY_TLS }}
+        run: venv/bin/python3 scripts/deploy_rule.py

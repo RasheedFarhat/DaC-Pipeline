@@ -58,8 +58,66 @@ def get_parent_group(service: str, category: str = '', product: str = '') -> str
         return 'syscheck'
     return 'syslog'
 
-def evaluate_ast(node: Any, rule: SigmaRule) -> List[Dict[str, str]]:
-    """Recursively walks the Sigma AST."""
+def extract_mitre_techniques(tag_names: List[str]) -> List[str]:
+    """Reduce Sigma tags to the MITRE technique IDs Wazuh's <mitre><id> expects.
+
+    Sigma tags mix tactics (attack.execution), techniques (attack.t1059.001),
+    groups (attack.g0016), software, etc. Only technique tags map to a valid Wazuh
+    MITRE id, so keep just `attack.t<digit>...` tags, strip the prefix, and upper-case
+    them (T1059.001). Tactic-level and all other tags are dropped.
+    """
+    techniques: List[str] = []
+    for name in tag_names:
+        if re.match(r'attack\.t\d', name, re.IGNORECASE):
+            techniques.append(name.replace('attack.', '').upper())
+    return techniques
+
+def _merge_literal(existing: Dict[str, Any], new: Dict[str, Any]) -> Dict[str, Any]:
+    """Combine two literals on the same field within a single AND-clause.
+
+    Wazuh ANDs all <field> elements in a rule and keys them by field name, so two
+    conditions on one field must collapse into a single pattern:
+      * both positive: conjunction via PCRE2 lookaheads (matches must co-occur).
+      * both negated:  not A AND not B == not (A or B), so alternate the patterns
+                       and keep negate=True.
+      * mixed polarity: cannot be expressed as one keyed field; fail loudly rather
+                       than emit a silently-wrong rule.
+    """
+    if existing["negate"] != new["negate"]:
+        raise ValueError(
+            "Cannot combine a positive and a negated match on the same field in one "
+            "condition; rewrite the Sigma rule to use distinct fields."
+        )
+    if existing["negate"]:
+        return {"pattern": f"(?:{existing['pattern']})|(?:{new['pattern']})", "negate": True}
+    return {"pattern": f"(?=.*{existing['pattern']})(?=.*{new['pattern']})", "negate": False}
+
+def _and_clauses(clause_lists: List[List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
+    """AND together several DNF operands by distributing into a flat DNF.
+
+    Each operand is a list of AND-clauses (OR-linked). The AND of all operands is the
+    cartesian product of their clauses, with same-field literals merged per clause.
+    """
+    import itertools
+    result: List[Dict[str, Any]] = []
+    for combo in itertools.product(*clause_lists):
+        merged: Dict[str, Any] = {}
+        for clause in combo:
+            for field, literal in clause.items():
+                if field in merged:
+                    merged[field] = _merge_literal(merged[field], literal)
+                else:
+                    merged[field] = literal
+        result.append(merged)
+    return result
+
+def evaluate_ast(node: Any, rule: SigmaRule) -> List[Dict[str, Any]]:
+    """Recursively walks the Sigma AST.
+
+    Each entry in the returned list is a dict mapping a Wazuh field name to
+    {"pattern": str, "negate": bool}.  The list represents OR alternatives;
+    multiple keys inside one dict represent AND conditions on the same rule.
+    """
     if isinstance(node, ConditionOR):
         result = []
         for arg in node.args:
@@ -67,23 +125,27 @@ def evaluate_ast(node: Any, rule: SigmaRule) -> List[Dict[str, str]]:
         return result
 
     elif isinstance(node, ConditionAND):
-        import itertools
         args_eval = [evaluate_ast(arg, rule) for arg in node.args]
-        result = []
-        for combo in itertools.product(*args_eval):
-            merged: Dict[str, str] = {}
-            for d in combo:
-                for k, v in d.items():
-                    if k in merged:
-                        merged[k] = f"(?=.*{merged[k]})(?=.*{v})"
-                    else:
-                        merged[k] = v
-            result.append(merged)
-        return result
+        return _and_clauses(args_eval)
 
     elif isinstance(node, ConditionNOT):
+        # De Morgan: NOT(c1 OR c2 OR ... cn) == NOT(c1) AND NOT(c2) AND ... NOT(cn).
+        # The child is a DNF (list of AND-clauses). Negating one clause flips every
+        # literal's polarity and turns its AND into an OR (a list of single-literal
+        # clauses); ANDing those negated clauses back together via _and_clauses keeps
+        # the result in DNF.
         child_evals = evaluate_ast(node.args[0], rule)
-        return [{k: f"(?!.*{v})" for k, v in d.items()} for d in child_evals]
+        negated_operands: List[List[Dict[str, Any]]] = []
+        for clause in child_evals:
+            alternatives = [
+                {field: {"pattern": literal["pattern"], "negate": not literal["negate"]}}
+                for field, literal in clause.items()
+            ]
+            if alternatives:
+                negated_operands.append(alternatives)
+        if not negated_operands:
+            return [{}]
+        return _and_clauses(negated_operands)
 
     else:
         from sigma.conditions import ConditionFieldEqualsValueExpression
@@ -104,6 +166,9 @@ def evaluate_ast(node: Any, rule: SigmaRule) -> List[Dict[str, str]]:
         }
         wazuh_field = FIELD_MAPPINGS.get(field, field)
 
+        starts_with_wildcard = node.value.startswith(SpecialChars.WILDCARD_MULTI)
+        ends_with_wildcard = node.value.endswith(SpecialChars.WILDCARD_MULTI)
+
         parts = []
         for part in node.value:
             if part == SpecialChars.WILDCARD_MULTI:
@@ -114,7 +179,12 @@ def evaluate_ast(node: Any, rule: SigmaRule) -> List[Dict[str, str]]:
                 parts.append(re.escape(str(part)))
         pattern = "".join(parts)
 
-        return [{wazuh_field: pattern}]
+        if not starts_with_wildcard:
+            pattern = "^" + pattern
+        if not ends_with_wildcard:
+            pattern = pattern + "$"
+
+        return [{wazuh_field: {"pattern": pattern, "negate": False}}]
 
 def load_registry() -> Dict[str, str]:
     try:
@@ -142,7 +212,7 @@ def main() -> None:
     # Load ID Registry and find next available ID
     registry = load_registry()
     existing_ids = [int(v) for v in registry.values() if str(v).isdigit()]
-    next_id = max(existing_ids) + 1 if existing_ids else 100000
+    next_id = max(existing_ids) + 1 if existing_ids else 200000
 
     count = 0
     skipped = 0
@@ -202,7 +272,7 @@ def main() -> None:
                         parent_group=get_parent_group(service, category, product),
                         fields=fields,
                         title=f"{rule.title} (Part {idx+1})" if len(rule_fields_list) > 1 else rule.title,
-                        tags=[str(tag.name) for tag in rule.tags] if rule.tags else []
+                        tags=extract_mitre_techniques([str(tag) for tag in rule.tags]) if rule.tags else []
                     )
 
                     try:
