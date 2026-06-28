@@ -1,14 +1,11 @@
-<group name="{{ product }}, {{ service }}, custom_sigma">
+<group name="{{ [product, service, 'custom_sigma'] | select | join(', ') }}">
   <rule id="{{ wazuh_id }}" level="{{ wazuh_level }}">
-    <info type="sigma_uuid">{{ rule_id }}</info>
+    <!-- sigma_uuid:{{ rule_id }} -->
     <if_group>{{ parent_group }}</if_group>
-    
     {% for field, value in fields.items() %}
     <field name="{{ field }}" type="pcre2">{{ value }}</field>
     {% endfor %}
-    
     <description>{{ title }}</description>
-    
     {% if tags %}
     <mitre>
       {% for tag in tags %}

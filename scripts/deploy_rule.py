@@ -102,32 +102,45 @@ def deploy_rules(token: str, settings: Settings, tls_verify: Union[bool, str], d
         logger.error(f"CRITICAL: Directory {settings.wazuh_dir} not found. Did the compiler run?")
         sys.exit(1)
 
-    headers: Dict[str, str] = {
-        'Authorization': f'Bearer {token}'
-    }
-    success: bool = True
+    xml_files = sorted([f for f in os.listdir(settings.wazuh_dir) if f.endswith(".xml")])
+    if not xml_files:
+        logger.error("CRITICAL: No XML rule files found in build directory.")
+        sys.exit(1)
 
-    for filename in os.listdir(settings.wazuh_dir):
-        if not filename.endswith(".xml"):
-            continue
-
-        filepath: str = os.path.join(settings.wazuh_dir, filename)
+    # Bundle all rules into a single file to avoid Wazuh restart race condition
+    rule_blocks = []
+    for filename in xml_files:
+        filepath = os.path.join(settings.wazuh_dir, filename)
         with open(filepath, 'r') as f:
-            xml_content: str = f.read()
+            content = f.read()
+        # Extract inner content between <group> tags
+        import re as _re
+        match = _re.search(r'<group[^>]*>(.*?)</group>', content, _re.DOTALL)
+        if match:
+            rule_blocks.append(f'<!-- Source: {filename} -->')
+            rule_blocks.append(match.group(0))
 
-        if dry_run:
-            logger.info(f"[DRY RUN] Would create/update file: {filename}")
-            continue
+    bundled_xml = '\n'.join(rule_blocks)
+    bundle_filename = "sigma_custom_rules.xml"
 
-        url: str = f"{settings.wazuh_api_url}/rules/files/{filename}"
-        try:
-            safe_api_request('PUT', url, headers=headers, data=xml_content, verify=tls_verify)
-            logger.info(f"Successfully deployed {filename}")
-        except requests.exceptions.RequestException as e:
-            logger.error(f"ERROR: Network or API failure deploying {filename}: {e}")
-            success = False
+    if dry_run:
+        logger.info(f"[DRY RUN] Would deploy {len(xml_files)} rules bundled as {bundle_filename}")
+        return True
 
-    return success
+    headers: Dict[str, str] = {
+        'Authorization': f'Bearer {token}',
+        'Content-Type': 'application/octet-stream'
+    }
+
+    url = f"{settings.wazuh_api_url}/rules/files/{bundle_filename}"
+    try:
+        safe_api_request('PUT', url, headers=headers, data=bundled_xml, verify=tls_verify)
+        logger.info(f"Successfully deployed {len(xml_files)} rules as {bundle_filename}")
+    except requests.exceptions.RequestException as e:
+        logger.error(f"ERROR: Network or API failure deploying bundle: {e}")
+        return False
+
+    return True
 
 # THE FIX: Added offline token check to bypass remote state query
 def reconcile_state(token: str, settings: Settings, tls_verify: Union[bool, str], dry_run: bool = False) -> None:
@@ -249,4 +262,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-# Trigger CI workflow
