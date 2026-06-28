@@ -72,51 +72,53 @@ def extract_mitre_techniques(tag_names: List[str]) -> List[str]:
             techniques.append(name.replace('attack.', '').upper())
     return techniques
 
-def _merge_literal(existing: Dict[str, Any], new: Dict[str, Any]) -> Dict[str, Any]:
-    """Combine two literals on the same field within a single AND-clause.
+def _merge_field_literals(existing: List[Dict[str, Any]], incoming: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Combine two lists of literals for the SAME Wazuh field within one AND-clause.
 
-    Wazuh ANDs all <field> elements in a rule and keys them by field name, so two
-    conditions on one field must collapse into a single pattern:
-      * both positive: conjunction via PCRE2 lookaheads (matches must co-occur).
-      * both negated:  not A AND not B == not (A or B), so alternate the patterns
-                       and keep negate=True.
-      * mixed polarity: cannot be expressed as one keyed field; fail loudly rather
-                       than emit a silently-wrong rule.
+    Wazuh ANDs every <field> element in a rule, so a field may appear more than once:
+      * same polarity collapses into one literal (positives via PCRE2 lookahead
+        conjunction, negatives via alternation under a single negate="yes").
+      * a positive and a negated literal coexist as two separate <field> elements
+        (Wazuh ANDs them: "matches A and does not match B") — the common
+        `selection and not filter` exclusion pattern.
     """
-    if existing["negate"] != new["negate"]:
-        raise ValueError(
-            "Cannot combine a positive and a negated match on the same field in one "
-            "condition; rewrite the Sigma rule to use distinct fields."
-        )
-    if existing["negate"]:
-        return {"pattern": f"(?:{existing['pattern']})|(?:{new['pattern']})", "negate": True}
-    return {"pattern": f"(?=.*{existing['pattern']})(?=.*{new['pattern']})", "negate": False}
+    result: List[Dict[str, Any]] = [dict(lit) for lit in existing]
+    for lit in incoming:
+        same = next((e for e in result if e["negate"] == lit["negate"]), None)
+        if same is None:
+            result.append(dict(lit))
+        elif lit["negate"]:
+            same["pattern"] = f"(?:{same['pattern']})|(?:{lit['pattern']})"
+        else:
+            same["pattern"] = f"(?=.*{same['pattern']})(?=.*{lit['pattern']})"
+    return result
 
-def _and_clauses(clause_lists: List[List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
+def _and_clauses(clause_lists: List[List[Dict[str, List[Dict[str, Any]]]]]) -> List[Dict[str, List[Dict[str, Any]]]]:
     """AND together several DNF operands by distributing into a flat DNF.
 
     Each operand is a list of AND-clauses (OR-linked). The AND of all operands is the
-    cartesian product of their clauses, with same-field literals merged per clause.
+    cartesian product of their clauses; same-field literals are merged per clause.
     """
     import itertools
-    result: List[Dict[str, Any]] = []
+    result: List[Dict[str, List[Dict[str, Any]]]] = []
     for combo in itertools.product(*clause_lists):
-        merged: Dict[str, Any] = {}
+        merged: Dict[str, List[Dict[str, Any]]] = {}
         for clause in combo:
-            for field, literal in clause.items():
+            for field, literals in clause.items():
                 if field in merged:
-                    merged[field] = _merge_literal(merged[field], literal)
+                    merged[field] = _merge_field_literals(merged[field], literals)
                 else:
-                    merged[field] = literal
+                    merged[field] = [dict(lit) for lit in literals]
         result.append(merged)
     return result
 
-def evaluate_ast(node: Any, rule: SigmaRule) -> List[Dict[str, Any]]:
+def evaluate_ast(node: Any, rule: SigmaRule) -> List[Dict[str, List[Dict[str, Any]]]]:
     """Recursively walks the Sigma AST.
 
-    Each entry in the returned list is a dict mapping a Wazuh field name to
-    {"pattern": str, "negate": bool}.  The list represents OR alternatives;
-    multiple keys inside one dict represent AND conditions on the same rule.
+    Each entry in the returned list is one OR-alternative (a rule). A rule maps each
+    Wazuh field name to a LIST of {"pattern": str, "negate": bool} literals; a field
+    may carry more than one literal (e.g. a positive match plus a negated exclusion),
+    which the template renders as multiple <field> elements ANDed by Wazuh.
     """
     if isinstance(node, ConditionOR):
         result = []
@@ -135,11 +137,12 @@ def evaluate_ast(node: Any, rule: SigmaRule) -> List[Dict[str, Any]]:
         # clauses); ANDing those negated clauses back together via _and_clauses keeps
         # the result in DNF.
         child_evals = evaluate_ast(node.args[0], rule)
-        negated_operands: List[List[Dict[str, Any]]] = []
+        negated_operands: List[List[Dict[str, List[Dict[str, Any]]]]] = []
         for clause in child_evals:
             alternatives = [
-                {field: {"pattern": literal["pattern"], "negate": not literal["negate"]}}
-                for field, literal in clause.items()
+                {field: [{"pattern": literal["pattern"], "negate": not literal["negate"]}]}
+                for field, literals in clause.items()
+                for literal in literals
             ]
             if alternatives:
                 negated_operands.append(alternatives)
@@ -184,7 +187,7 @@ def evaluate_ast(node: Any, rule: SigmaRule) -> List[Dict[str, Any]]:
         if not ends_with_wildcard:
             pattern = pattern + "$"
 
-        return [{wazuh_field: {"pattern": pattern, "negate": False}}]
+        return [{wazuh_field: [{"pattern": pattern, "negate": False}]}]
 
 def load_registry() -> Dict[str, str]:
     try:
