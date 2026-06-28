@@ -1,13 +1,15 @@
 .PHONY: test compile validate ci clean all
 
+PYTHON = /Users/rasheedfarhat/DaC-Pipeline/venv/bin/python3
+
 test:
-	python3 -m pytest tests/ -v --tb=short
+	$(PYTHON) -m pytest tests/ -v --tb=short
 
 compile:
-	python3 scripts/compile_sigma.py
+	$(PYTHON) scripts/compile_sigma.py
 
 validate:
-	python3 scripts/check_rule_ids.py
+	$(PYTHON) scripts/check_rule_ids.py
 
 ci:
 	act push -W .github/workflows/integrate_rulesets.yml --secret-file .secrets

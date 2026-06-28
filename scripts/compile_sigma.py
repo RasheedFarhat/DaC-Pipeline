@@ -86,49 +86,33 @@ def evaluate_ast(node: Any, rule: SigmaRule) -> List[Dict[str, str]]:
         return [{k: f"(?!.*{v})" for k, v in d.items()} for d in child_evals]
 
     else:
-        identifier = getattr(node, 'identifier', None) or getattr(node, 'name', str(node))
-        name = str(identifier).replace('ConditionItem(', '').replace(')', '').strip()
+        from sigma.conditions import ConditionFieldEqualsValueExpression
+        from sigma.types import SpecialChars
 
-        detection = rule.detection.detections.get(name)
-        if not detection:
+        if not isinstance(node, ConditionFieldEqualsValueExpression):
+            logger.warning(f"Unknown AST node type at leaf: {type(node).__name__}")
             return [{}]
 
-        fields: Dict[str, str] = {}
-        for item in detection.detection_items:
-            if not item.field:
-                continue
+        field = node.field
+        wazuh_field = field
+        if field == "CommandLine":
+            wazuh_field = "win.eventdata.commandLine"
+        elif field == "Image":
+            wazuh_field = "win.eventdata.image"
+        elif field == "file":
+            wazuh_field = "syscheck.path"
 
-            wazuh_field = item.field
-            if wazuh_field == "CommandLine": wazuh_field = "win.eventdata.commandLine"
-            elif wazuh_field == "Image": wazuh_field = "win.eventdata.image"
-            elif wazuh_field == "file": wazuh_field = "syscheck.path"
-
-            modifiers = [(m.__name__ if hasattr(m, '__name__') else m.__class__.__name__).lower().replace('sigma', '').replace('modifier', '') for m in item.modifiers] if item.modifiers else []
-
-            raw_vals = [v.to_plain() if hasattr(v, 'to_plain') else str(v) for v in item.value]
-
-            escaped_vals = []
-            for v in raw_vals:
-                if 'all' in modifiers:
-                    escaped_vals.append(re.escape(v.strip('*')))
-                else:
-                    escaped_vals.append(re.escape(v).replace('\\*', '.*'))
-
-            if 'endswith' in modifiers:
-                mapped_vals = [f"{v}$" for v in escaped_vals]
-            elif 'startswith' in modifiers:
-                mapped_vals = [f"^{v}" for v in escaped_vals]
+        parts = []
+        for part in node.value:
+            if part == SpecialChars.WILDCARD_MULTI:
+                parts.append(".*")
+            elif part == SpecialChars.WILDCARD_SINGLE:
+                parts.append(".")
             else:
-                mapped_vals = escaped_vals
+                parts.append(re.escape(str(part)))
+        pattern = "".join(parts)
 
-            compiled_val = f"({'|'.join(mapped_vals)})" if len(mapped_vals) > 1 else mapped_vals[0]
-
-            if wazuh_field in fields:
-                fields[wazuh_field] = f"(?=.*{fields[wazuh_field]})(?=.*{compiled_val})"
-            else:
-                fields[wazuh_field] = compiled_val
-
-        return [fields]
+        return [{wazuh_field: pattern}]
 
 def load_registry() -> Dict[str, str]:
     try:
