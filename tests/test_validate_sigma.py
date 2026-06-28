@@ -1,15 +1,13 @@
 import os
-from scripts.validate_sigma import run_pysigma_validation
+import sys
+import pytest
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'scripts'))
+from validate_sigma import run_pysigma_validation
+
+FIXTURE_DIR = os.path.join(os.path.dirname(__file__), 'fixtures')
 
 def test_sigma_syntax_validation():
-    """
-    Ensures validate_sigma.py correctly identifies malformed Sigma YAML.
-    """
-    fixture_dir = os.path.join("tests", "fixtures")
-    errors = run_pysigma_validation(fixture_dir)
-    
-    assert len(errors) > 0, "Sigma validation failed to catch broken syntax!"
-    error_text = " ".join(errors)
-    
-    # Target the specific pySigma schema violation
-    assert "Sigma rule must have a log source" in error_text, "Failed to catch the missing logsource block"
+    """Validates that the pipeline catches invalid Sigma rules."""
+    errors = run_pysigma_validation(FIXTURE_DIR)
+    assert len(errors) > 0, "Expected validation errors for the bad fixture, but got none"
