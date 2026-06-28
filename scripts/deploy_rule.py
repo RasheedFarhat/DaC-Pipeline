@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     wazuh_user: str = Field(...)
     wazuh_password: str = Field(...)
     wazuh_ca_bundle: Optional[str] = Field(default=None)
-    wazuh_insecure: bool = Field(default=False)
+    wazuh_verify_tls: bool = Field(default=True)
 
     wazuh_dir: str = Field(default="build/wazuh")
     agent_conf_path: str = Field(default="configs/agent.conf")
@@ -55,7 +55,7 @@ def load_settings() -> Settings:
 def get_tls_strategy(settings: Settings) -> Union[bool, str]:
     if settings.wazuh_ca_bundle and os.path.exists(settings.wazuh_ca_bundle):
         return settings.wazuh_ca_bundle
-    elif settings.wazuh_insecure:
+    elif not settings.wazuh_verify_tls:
         import urllib3
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         logger.warning("INSECURE MODE ACTIVATED: TLS certificate verification is disabled.")
