@@ -24,19 +24,48 @@ def load_config() -> Dict[str, str]:
     try:
         with open("pipeline.yaml", "r") as f:
             config = yaml.safe_load(f)
+            build = config.get("build", {})
             return {
-                "sigma_dir": config.get("build", {}).get("sigma_dir", "rules/sigma"),
-                "wazuh_dir": config.get("build", {}).get("wazuh_dir", "build/wazuh"),
-                "template_dir": config.get("build", {}).get("template_dir", "templates")
+                "sigma_dir": build.get("sigma_dir", "rules/sigma"),
+                "wazuh_dir": build.get("wazuh_dir", "build/wazuh"),
+                "template_dir": build.get("template_dir", "templates"),
+                "field_mappings": build.get("field_mappings", "field_mappings.yaml"),
             }
     except FileNotFoundError:
         logger.warning("pipeline.yaml not found, falling back to defaults.")
-        return {"sigma_dir": "rules/sigma", "wazuh_dir": "build/wazuh", "template_dir": "templates"}
+        return {"sigma_dir": "rules/sigma", "wazuh_dir": "build/wazuh",
+                "template_dir": "templates", "field_mappings": "field_mappings.yaml"}
+
+# Minimal built-in fallback used only if the external mapping file is missing.
+DEFAULT_FIELD_MAPPINGS: Dict[str, str] = {
+    "CommandLine": "win.eventdata.commandLine",
+    "Image": "win.eventdata.image",
+    "file": "syscheck.path",
+}
+
+def load_field_mappings(path: str) -> Dict[str, str]:
+    """Load the Sigma->Wazuh field name map from an external YAML file.
+
+    Keeping the map in a data file (rather than a code literal) lets rule authors
+    extend coverage without touching the compiler. Falls back to a minimal built-in
+    set if the file is missing or malformed.
+    """
+    try:
+        with open(path, "r") as f:
+            data = yaml.safe_load(f)
+    except FileNotFoundError:
+        logger.warning(f"{path} not found; using built-in field mappings.")
+        return dict(DEFAULT_FIELD_MAPPINGS)
+    if not isinstance(data, dict) or not data:
+        logger.warning(f"{path} is empty or not a mapping; using built-in field mappings.")
+        return dict(DEFAULT_FIELD_MAPPINGS)
+    return {str(k): str(v) for k, v in data.items()}
 
 CONFIG = load_config()
 SIGMA_DIR = CONFIG["sigma_dir"]
 BUILD_DIR = CONFIG["wazuh_dir"]
 TEMPLATE_DIR = CONFIG["template_dir"]
+FIELD_MAPPINGS = load_field_mappings(CONFIG["field_mappings"])
 
 env = Environment(
     loader=FileSystemLoader(TEMPLATE_DIR),
@@ -159,14 +188,6 @@ def evaluate_ast(node: Any, rule: SigmaRule) -> List[Dict[str, List[Dict[str, An
             return [{}]
 
         field = node.field
-        FIELD_MAPPINGS = {
-            "CommandLine": "win.eventdata.commandLine",
-            "Image": "win.eventdata.image",
-            "file": "syscheck.path",
-            "DestinationPort": "win.eventdata.destinationPort",
-            "TargetObject": "win.eventdata.targetObject",
-            "SourceIp": "win.eventdata.sourceIp",
-        }
         wazuh_field = FIELD_MAPPINGS.get(field, field)
 
         starts_with_wildcard = node.value.startswith(SpecialChars.WILDCARD_MULTI)
