@@ -55,10 +55,13 @@ jobs:
       - name: Post Comment to PR
         if: always() # Forces this to run even if the dry-run step fails
         uses: actions/github-script@v7
+        env:
+          DEPLOY_OUTPUT: ${{ steps.dry_run.outputs.deploy_output }}
+          DEPLOY_STATUS: ${{ steps.dry_run.outputs.status }}
         with:
           script: |
-            const output = `${{ steps.dry_run.outputs.deploy_output }}`;
-            const status = `${{ steps.dry_run.outputs.status }}`;
+            const output = process.env.DEPLOY_OUTPUT;
+            const status = process.env.DEPLOY_STATUS;
             const icon = status === 'success' ? '✅' : '❌';
             const body = `### ${icon} Wazuh Dry Run Results\n\`\`\`text\n${output}\n\`\`\``;
 
