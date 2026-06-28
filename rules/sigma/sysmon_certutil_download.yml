@@ -1,6 +1,5 @@
 title: Suspicious Certutil Network Connection
 id: c8d8b9e5-9c8f-4318-8f53-27df8a213564
-wazuh_id: 100006
 status: experimental
 description: Detects Certutil downloading files, a common living-off-the-land (LOLBin) technique (MITRE T1105).
 author: Rasheed Farhat
