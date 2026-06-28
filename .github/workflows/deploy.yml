@@ -12,19 +12,19 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Dependencies
-        run: /Users/rasheedfarhat/DaC-Pipeline/venv/bin/pip install -r requirements.txt
+        run: venv/bin/pip install -r requirements.txt
 
       - name: Run Tests
-        run: /Users/rasheedfarhat/DaC-Pipeline/venv/bin/python3 -m pytest tests/ -v --tb=short
+        run: venv/bin/python3 -m pytest tests/ -v --tb=short
 
       - name: Validate Sigma Rules
-        run: /Users/rasheedfarhat/DaC-Pipeline/venv/bin/python3 scripts/validate_sigma.py
+        run: venv/bin/python3 scripts/validate_sigma.py
 
       - name: Compile Rules
-        run: /Users/rasheedfarhat/DaC-Pipeline/venv/bin/python3 scripts/compile_sigma.py
+        run: venv/bin/python3 scripts/compile_sigma.py
 
       - name: Validate Rule IDs
-        run: /Users/rasheedfarhat/DaC-Pipeline/venv/bin/python3 scripts/check_rule_ids.py
+        run: venv/bin/python3 scripts/check_rule_ids.py
 
       - name: Deploy to Wazuh API
         env:
@@ -32,4 +32,4 @@ jobs:
           WAZUH_USER: ${{ secrets.WAZUH_USER }}
           WAZUH_PASSWORD: ${{ secrets.WAZUH_PASSWORD }}
           WAZUH_INSECURE: ${{ secrets.WAZUH_INSECURE }}
-        run: /Users/rasheedfarhat/DaC-Pipeline/venv/bin/python3 scripts/deploy_rule.py
+        run: venv/bin/python3 scripts/deploy_rule.py
