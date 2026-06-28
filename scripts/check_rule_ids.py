@@ -60,13 +60,20 @@ def validate_pipeline(directories):
             root = tree.getroot()
             for rule in root.findall('.//rule'):
                 rule_id = rule.get('id')
-                info_tag = rule.find(".//info[@type='sigma_uuid']")
+                # UUID is stored as XML comment: <!-- sigma_uuid:UUID -->
+                import re as _re
+                uuid_from_comment = None
+                with open(filepath, 'r') as _f:
+                    raw = _f.read()
+                comment_match = _re.search(r'<!--\s*sigma_uuid:([\w-]+)\s*-->', raw)
+                if comment_match:
+                    uuid_from_comment = comment_match.group(1)
 
                 if rule_id:
                     try:
                         rule_id_int = int(rule_id)
-                        if rule_id_int < 100000:
-                            errors.append(f"[!] Reserved ID Violation: Rule {rule_id_int} in {filepath}. Custom rules must be >= 100000.")
+                        if rule_id_int < 200000:
+                            errors.append(f"[!] Reserved ID Violation: Rule {rule_id_int} in {filepath}. Custom rules must be >= 200000.")
                     except ValueError:
                         errors.append(f"[!] Invalid ID Format: Rule '{rule_id}' in {filepath} is not an integer.")
 
@@ -75,11 +82,11 @@ def validate_pipeline(directories):
                     else:
                         wazuh_ids[rule_id] = [filepath]
 
-                if info_tag is not None and info_tag.text:
-                    if info_tag.text not in sigma_uuids:
-                        errors.append(f"[!] Orphaned XML (Dangling): {filepath} references Sigma UUID {info_tag.text}, but it does not exist in the repository.")
+                if uuid_from_comment:
+                    if uuid_from_comment not in sigma_uuids:
+                        errors.append(f"[!] Orphaned XML (Dangling): {filepath} references Sigma UUID {uuid_from_comment}, but it does not exist in the repository.")
                 else:
-                    errors.append(f"[!] Orphaned XML (Omission): {filepath} (Rule {rule_id}) declares no Sigma parent (missing <info type='sigma_uuid'>).")
+                    errors.append(f"[!] Orphaned XML (Omission): {filepath} (Rule {rule_id}) declares no Sigma parent (missing sigma_uuid comment).")
         except ET.ParseError as e:
             errors.append(f"[!] Invalid XML in {filepath}: {e}")
 
