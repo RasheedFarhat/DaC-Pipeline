@@ -7,7 +7,7 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'scripts'))
 
 from sigma.collection import SigmaCollection
-from compile_sigma import evaluate_ast, extract_mitre_techniques, template
+from compile_sigma import evaluate_ast, extract_mitre_techniques, template, FIELD_MAPPINGS
 
 WIN_CMD = "win.eventdata.commandLine"
 WIN_IMG = "win.eventdata.image"
@@ -192,6 +192,28 @@ def test_mixed_polarity_renders_two_field_elements():
     ]})
     assert xml.count('name="win.eventdata.commandLine"') == 2
     assert 'negate="yes"' in xml
+
+
+# --- Externalized field mappings ------------------------------------------------
+
+def test_expanded_sysmon_fields_are_mapped():
+    # Fields that used to pass through unmapped (and never fire) now resolve to the
+    # Wazuh decoder field names loaded from field_mappings.yaml.
+    res = _compile("    sel:\n        ParentImage|endswith: '\\explorer.exe'\n    condition: sel")
+    assert list(res[0].keys()) == ["win.eventdata.parentImage"]
+
+
+def test_field_mappings_loaded_from_file():
+    # A representative slice of the externalized map is present at import time.
+    assert FIELD_MAPPINGS["ParentCommandLine"] == "win.eventdata.parentCommandLine"
+    assert FIELD_MAPPINGS["OriginalFileName"] == "win.eventdata.originalFileName"
+    assert FIELD_MAPPINGS["IntegrityLevel"] == "win.eventdata.integrityLevel"
+
+
+def test_unmapped_field_passes_through():
+    # Unknown fields still pass through unchanged (caller's responsibility to add).
+    res = _compile("    sel:\n        TotallyUnknownField: x\n    condition: sel")
+    assert list(res[0].keys()) == ["TotallyUnknownField"]
 
 
 # --- MITRE technique extraction -------------------------------------------------
