@@ -187,6 +187,11 @@ def evaluate_ast(node: Any, rule: SigmaRule) -> List[Dict[str, List[Dict[str, An
         if not ends_with_wildcard:
             pattern = pattern + "$"
 
+        # Sigma string matching is case-insensitive by default, but Wazuh's pcre2
+        # field type is case-sensitive. Prefix an inline (?i) so a casing variant
+        # (e.g. CertUtil.exe vs certutil.exe) can't silently evade the detection.
+        pattern = "(?i)" + pattern
+
         return [{wazuh_field: [{"pattern": pattern, "negate": False}]}]
 
 def load_registry() -> Dict[str, str]:
