@@ -6,12 +6,14 @@ useDefault = true
 
 # ...but allowlist the two historical commits that contain a now-dead lab
 # credential (the "MyS3cr37P450r.*-" Wazuh password that was later moved to env
-# vars). The credential has been rotated and a full history scrub is tracked in
-# SECURITY.md. This entry keeps the secret scan green for the rest of history and
-# all FUTURE commits while that scrub is scheduled — it does not weaken detection
-# anywhere else. Remove this block once the history has been rewritten.
+# vars). The credential was ROTATED — the leaked value is dead — and a history
+# rewrite was deliberately declined (see SECURITY.md): every branch descends from
+# these commits and GitHub caches by SHA, so a scrub is disproportionate for an
+# inert string. The string is intentionally retained in history; this allowlist is
+# therefore permanent, scoped to these two SHAs only, and keeps the scan green
+# without weakening detection on any other commit, past or future.
 [allowlist]
-description = "Known historical lab credential — rotated; history scrub tracked in SECURITY.md"
+description = "Historical lab credential — rotated/dead value, retained in history by decision (see SECURITY.md)"
 commits = [
   "b0ba093d96ec3a3a6a6a6c046355a79d50abed9d",
   "a76308ce6a111b32bc910db4209380ab94b3f849",
