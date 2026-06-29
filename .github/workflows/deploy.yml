@@ -9,7 +9,7 @@ jobs:
     environment: production
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Create virtual environment
         run: python3.11 -m venv venv
