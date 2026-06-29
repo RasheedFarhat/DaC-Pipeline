@@ -1,109 +1,144 @@
-# Detection-as-Code (DaC) CI/CD Pipeline
+# Detection-as-Code Pipeline · Sigma → Wazuh
 
-[![CI/CD Validation](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/check_rule_ids.yml/badge.svg)](https://github.com/RasheedFarhat/DaC-Pipeline/actions)
+[![CI Pipeline](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/integrate_rulesets.yml/badge.svg)](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/integrate_rulesets.yml)
 [![gitleaks](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/gitleaks.yml/badge.svg)](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/gitleaks.yml)
 [![CodeQL](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/codeql.yml/badge.svg)](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/codeql.yml)
 [![bandit](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/bandit.yml/badge.svg)](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/bandit.yml)
 [![pip-audit](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/pip-audit.yml/badge.svg)](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/pip-audit.yml)
-![Release](https://img.shields.io/badge/Release-v1.0.0-blue)
-![Python](https://img.shields.io/badge/Python-3.10+-yellow?logo=python)
+![Python](https://img.shields.io/badge/Python-3.11+-yellow?logo=python)
 ![SIEM](https://img.shields.io/badge/SIEM-Wazuh_v4.9-00AEEF)
+![Tests](https://img.shields.io/badge/tests-35_passing-success)
 ![License](https://img.shields.io/badge/License-MIT-success)
 
-## Overview
+Author a threat detection **once** in [Sigma](https://github.com/SigmaHQ/sigma) YAML; a
+custom compiler translates it into native [Wazuh](https://wazuh.com/) PCRE2 XML, CI
+validates and ID-stabilizes it, and CD deploys it to a live Wazuh manager — every change
+peer-reviewed, unit-tested, and mapped to MITRE ATT&CK.
 
-![Detection-as-Code Architecture Pipeline](./assets/MechanismFlowChart.png)
+> **Why this is more than a script:** No official `pysigma-backend-wazuh` exists on PyPI,
+> so `scripts/compile_sigma.py` is a **from-scratch compiler**. It walks the Sigma
+> detection AST, distributes it into disjunctive normal form, applies **De Morgan's law**
+> to negations, merges same-field literals into Wazuh PCRE2 (lookahead conjunction for
+> positives, alternation for negatives), emits case-insensitive `(?i)` matches to mirror
+> Sigma semantics, and resolves Sigma field names through an external `field_mappings.yaml`
+> — covered by 35 unit tests.
 
-A Detection-as-Code (DaC) pipeline that manages threat detection rules as version-controlled code. Detections are authored once in [Sigma](https://github.com/SigmaHQ/sigma) YAML, validated automatically in CI, and deployed as custom rules to a [Wazuh](https://wazuh.com/) SIEM via GitHub Actions.
+## 30-second tour
+
+```bash
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+make all        # clean → compile Sigma → validate IDs → run tests (35 passing)
+```
+
+`make all` compiles the 3 example Sigma rules into 14 Wazuh rules (one rule fans out to 12
+via DNF distribution), validates every ID and Sigma↔Wazuh UUID link, and runs the suite.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    A["rules/sigma/*.yml<br/>source of truth"] --> B["validate_sigma.py<br/>sigma-cli syntax check"]
+    B --> C["compile_sigma.py<br/>AST → DNF → De Morgan → PCRE2<br/>(?i) · field_mappings.yaml"]
+    C --> D["build/wazuh/*.xml<br/>(gitignored) + id_registry.json"]
+    D --> E["check_rule_ids.py<br/>ID ≥ 200000 · UUID linkage"]
+    E --> F{CI gate}
+    F -->|pull request| G["pr_dry_run.yml<br/>deploy --dry-run, posts diff comment"]
+    F -->|merge to main| H["deploy_rule.py<br/>bundle · 401 re-auth · reconcile orphans"]
+    H --> I[("Wazuh Manager<br/>REST API")]
+    F -.every push & PR.-> S["Security scans<br/>gitleaks · CodeQL · bandit · pip-audit"]
+```
 
 ## How it works
 
-1. **Author** a detection in Sigma YAML (`rules/*.yml`), this is the single source of truth.
-2. **Translate** it into the corresponding Wazuh XML rule (`rules/wazuh/*.xml`), linked back to the Sigma rule via a `sigma_uuid` reference.
-3. **Open a pull request.** The validation workflow checks Sigma syntax, rule ID conventions, and that every Wazuh rule correctly maps back to a Sigma rule.
-4. **Merge to `main`.** The deployment workflow pushes the Wazuh rules and agent configuration to a live Wazuh manager via its REST API and restarts the analysis engine.
+1. **Author** a detection in Sigma YAML under `rules/sigma/` — the single source of truth.
+2. **Compile** with `compile_sigma.py`: the detection condition is parsed into an AST,
+   evaluated into disjunctive normal form, mapped from Sigma field names to Wazuh field
+   names via the external `field_mappings.yaml`, rendered through
+   `templates/wazuh_rule.xml.j2`, and written to `build/wazuh/` (gitignored — a regenerable
+   build artifact). Stable Wazuh rule IDs are assigned from `id_registry.json` and committed
+   back.
+3. **Validate** with `check_rule_ids.py`: every Wazuh ID must be an integer ≥ 200000, every
+   XML must carry a `<!-- sigma_uuid:UUID -->` comment linking it to a Sigma rule, and no
+   IDs or UUIDs may collide.
+4. **Open a pull request.** CI runs tests → Sigma syntax → compile → ID validation; the
+   security scanners (gitleaks, CodeQL, bandit, pip-audit) run as their own checks; and
+   `pr_dry_run.yml` posts a deployment dry-run diff as a PR comment.
+5. **Deploy** (`deploy.yml`, manual `workflow_dispatch` on a self-hosted runner):
+   `deploy_rule.py` bundles all rules into one file, PUTs them to the Wazuh API
+   (re-authenticating once on a 401), reconciles orphaned rules behind a blast-radius
+   safeguard, pushes `configs/agent.conf`, and restarts the manager.
 
 ## Repository structure
 
 ```
 .
-├── .github/workflows/
-│   ├── check_rule_ids.yml      # CI: validation on pull requests
-│   └── integrate_rulesets.yml  # CD: deploy rules to Wazuh on push to main
-├── .pre-commit-config.yaml     # Local validation hooks (run on git commit)
-├── configs/
-│   └── agent.conf              # Wazuh agent group configuration
-├── rules/
-│   ├── *.yml                   # Sigma detection rules (source of truth)
-│   └── wazuh/*.xml             # Corresponding Wazuh custom rules
+├── .github/
+│   ├── workflows/
+│   │   ├── integrate_rulesets.yml  # CI: test → validate → compile → validate IDs
+│   │   ├── deploy.yml              # CD: same steps + deploy to Wazuh (manual dispatch)
+│   │   ├── pr_dry_run.yml          # PR: deploy --dry-run, posts result as a comment
+│   │   ├── gitleaks.yml            # secret scanning (full history)
+│   │   ├── codeql.yml              # Python SAST
+│   │   ├── bandit.yml              # Python SAST
+│   │   └── pip-audit.yml           # dependency CVE scanning
+│   └── dependabot.yml              # weekly pip + github-actions updates (grouped)
+├── rules/sigma/*.yml               # Sigma detection rules (source of truth)
+├── build/wazuh/*.xml               # Compiled Wazuh rules (gitignored, regenerated)
 ├── scripts/
-│   ├── validate_sigma.py       # Validates Sigma syntax + compiles via pySigma
-│   ├── check_rule_ids.py       # Enforces ID rules and Sigma<->Wazuh linkage
-│   └── deploy_rule.py          # Deploys rules/config to a Wazuh manager
-├── tests/
-│   ├── fixtures/                # Deliberately broken rules for testing validators
-│   └── test_*.py                # pytest harness for validate_sigma.py / check_rule_ids.py
-└── requirements.txt
+│   ├── validate_sigma.py           # sigma-cli syntax validation
+│   ├── compile_sigma.py            # Sigma AST → Wazuh PCRE2 XML compiler
+│   ├── check_rule_ids.py           # ID conventions + Sigma↔Wazuh UUID linkage
+│   └── deploy_rule.py              # Bundles + deploys rules to a Wazuh manager
+├── templates/wazuh_rule.xml.j2     # Jinja2 template for Wazuh XML output
+├── field_mappings.yaml             # Sigma field name → Wazuh decoder field name
+├── id_registry.json                # sigma_uuid → wazuh_id (must be committed)
+├── pipeline.yaml                   # Central path/deploy config
+├── configs/agent.conf              # Wazuh agent group config (deployed with rules)
+├── requirements.in                 # direct dependencies (source of truth)
+├── requirements.txt                # pip-compile-generated lock
+├── SECURITY.md · CONTRIBUTING.md   # disclosure policy · contributor guide
+└── tests/                          # pytest suite + deliberately-broken fixtures
 ```
 
-## Example Detections Included
+## Example detections
 
-| Sigma rule | Wazuh ID | Level | MITRE ATT&CK | Description |
+| Sigma rule | Wazuh ID(s) | Level | MITRE ATT&CK | Description |
 |---|---|---|---|---|
-| `sysmon_wmic_xsl_bypass.yml` | 100005 | 12 | T1220 | `wmic.exe os get /format:` with a remote/local `.xsl` payload — AppLocker bypass |
-| `sysmon_certutil_download.yml` | 100006 | 10 | T1105 | `certutil.exe` used with `urlcache`/`split` to download files (LOLBin) |
-| `lnx_clear_cmd_history.yml` | 100010 | 10 | T1070.003 | `.bash_history` modified or cleared (defense evasion) |
+| `lnx_clear_cmd_history.yml` | 200000 | high | T1070.003 | `.bash_history` modified or cleared (defense evasion) |
+| `sysmon_certutil_download.yml` | 200001 | high | T1105 | `certutil.exe` with `urlcache`/`split` to download files (LOLBin) |
+| `sysmon_wmic_xsl_bypass.yml` | 200005–200016 | high | T1220 | `wmic os get /format:` with a remote/local `.xsl` payload — AppLocker bypass. Compiles to **12** Wazuh rules: the compiler distributes its nested OR conditions into DNF, one rule per alternative. |
 
 ## Prerequisites
 
 - Python 3.11+
-- Git
 - A reachable Wazuh manager with API access (only required for deployment)
 
 ## Getting started
 
-### 1. Clone and set up the environment
-
 ```bash
-git clone https://github.com/RasheedFarhat/DaC-Pipeline.git
-cd DaC-Pipeline
-
-python3 -m venv venv
-source venv/bin/activate        # On Windows: venv\Scripts\activate
-
+git clone https://github.com/RasheedFarhat/DaC-Pipeline.git && cd DaC-Pipeline
+python3 -m venv venv && source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-pre-commit install              # Initialize local git hooks
+pre-commit install                                  # local hooks: validators + mypy
 ```
 
-### 2. Validate the existing rules locally
+### Validate and build locally
 
 ```bash
-# Check that every Sigma rule is syntactically valid and compiles to a backend
-python scripts/validate_sigma.py
-
-# Check ID conventions, duplicates, and Sigma <-> Wazuh linkage
-python scripts/check_rule_ids.py
-
-# Run the test suite to confirm the validators themselves catch known-bad rules
-pytest -v tests/
+python scripts/validate_sigma.py   # Sigma syntax (sigma-cli)
+python scripts/compile_sigma.py    # Sigma → build/wazuh/*.xml
+python scripts/check_rule_ids.py   # ID conventions + Sigma↔Wazuh linkage
+pytest -v tests/                   # 35 tests covering compiler + deploy
+# or simply:  make all
 ```
 
-All three exit non-zero on failure. `validate_sigma.py` and `check_rule_ids.py` already run automatically on every pull request via `.github/workflows/check_rule_ids.yml`, and locally via pre-commit hooks (see below) before a commit is even made.
+All steps exit non-zero on failure. The same checks run in CI on every pull request and
+locally via pre-commit before a commit is made.
 
-### Local validation with pre-commit (recommended)
+### Add a new detection
 
-To catch invalid rules before they're even committed:
-
-```bash
-pip install pre-commit
-pre-commit install
-```
-
-Now `validate_sigma.py` and `check_rule_ids.py` run automatically on every `git commit`, blocking the commit if either fails.
-
-### 3. Add a new detection
-
-**a. Write a Sigma rule** in `rules/your_rule_name.yml` with a unique `id` (UUID v4):
+Write a Sigma rule in `rules/sigma/<name>.yml` with a unique `id` (UUID v4):
 
 ```yaml
 title: Example Detection
@@ -120,93 +155,70 @@ detection:
 level: medium
 tags:
     - attack.execution
+    - attack.t1059
 ```
 
-**b. Author the matching Wazuh rule** in `rules/wazuh/<name>.xml`. The custom rule `id` must be an integer **≥ 100000** and unique across the repo, and must reference the Sigma rule's UUID so `check_rule_ids.py` can verify the link:
+Then `make compile` — the compiler auto-assigns a Wazuh ID (≥ 200000), writes the XML to
+`build/wazuh/`, and records the `sigma_uuid → wazuh_id` mapping in `id_registry.json`.
 
-```xml
-<group name="windows,sysmon,">
-  <rule id="100020" level="10">
-    <info type="sigma_uuid">11111111-2222-3333-4444-555555555555</info>
-    <field name="win.eventdata.commandLine" type="pcre2">(?i)example_string</field>
-    <description>Example Detection</description>
-    <mitre>
-      <id>T1059</id>
-    </mitre>
-  </rule>
-</group>
-```
+> **Field mappings:** if your rule uses a Sigma field that isn't in `field_mappings.yaml`,
+> add it there. An unmapped field passes through unchanged to a name no Wazuh decoder
+> populates, so the rule would compile but **never fire**.
 
-**c. Validate locally**, then open a PR against `dev` or `main`:
+> **Always commit `id_registry.json`** alongside a new rule — the compiler rewrites it, and
+> forgetting leaves IDs unstable across CI runs.
 
-```bash
-python scripts/validate_sigma.py && python scripts/check_rule_ids.py
-```
+### Deploy to a Wazuh manager
 
-### 4. Deploy to a Wazuh manager
-
-Deployment runs automatically from `main` via `integrate_rulesets.yml`, but `deploy_rule.py` can also be run manually against any Wazuh manager.
-
-**Required credentials** (set as environment variables locally, or as repository secrets for CI):
+Deployment runs from `deploy.yml` (manual dispatch), but `deploy_rule.py` can be run
+directly. Configuration is read from `pipeline.yaml`, a local `.env`, and environment
+variables (env vars win).
 
 | Variable | Description |
 |---|---|
-| `WAZUH_API_URL` | Wazuh manager API URL, e.g. `https://wazuh.example.com:55000` |
-| `WAZUH_USER` | API user with permission to manage rules, group configs, and restart the manager |
+| `WAZUH_API_URL` | Manager API URL, e.g. `https://wazuh.example.com:55000` |
+| `WAZUH_USER` | API user able to manage rules, group configs, and restart the manager |
 | `WAZUH_PASSWORD` | API password for that user |
-| `WAZUH_VERIFY_TLS` | Set to `False` to bypass certificate validation (defaults to `True`) |
-| `WAZUH_CA_BUNDLE` | Optional file path to a custom CA certificate bundle |
+| `WAZUH_VERIFY_TLS` | `false` to skip cert verification (defaults to **`true`**) |
+| `WAZUH_CA_BUNDLE` | Optional path to a custom CA bundle (verify without disabling TLS) |
 
-**TLS verification is enabled by default.** For self-signed Wazuh installs, set `WAZUH_VERIFY_TLS=false` to disable verification, or — preferably — set `WAZUH_CA_BUNDLE=/path/to/ca.pem` to verify against a custom CA without disabling verification entirely.
-
-**Preview before deploying:** run with `--dry-run` to fetch the currently-deployed rules and print a diff against what would be uploaded, without modifying the SIEM:
-
-```bash
-python scripts/deploy_rule.py --dry-run
-```
-
-> Note: `--dry-run`'s remote-rule-content parsing has not yet been validated against a live Wazuh manager — if the diff output looks unexpected, this is the first place to check.
-
-**Run the deployment script manually:**
+TLS verification is **on by default**. For self-signed installs, prefer
+`WAZUH_CA_BUNDLE=/path/to/ca.pem` over disabling verification.
 
 ```bash
-export WAZUH_API_URL="https://127.0.0.1:55000"
-export WAZUH_USER="your-api-user"
-export WAZUH_PASSWORD="your-api-password"
-
-python scripts/deploy_rule.py
+python scripts/deploy_rule.py --dry-run   # simulate; never touches the manager
+python scripts/deploy_rule.py             # authenticate, bundle, deploy, reconcile, restart
 ```
 
-This will:
-- Authenticate to the Wazuh API
-- Upload every `.xml` file in `rules/wazuh/` to the manager
-- Push `configs/agent.conf` to the `default` agent group
-- Restart the manager so the new rules and configuration take effect (polls for health status before exiting)
+For CI/CD, add the variables as repository secrets under
+**Settings → Secrets and variables → Actions** and dispatch `deploy.yml`.
 
-**For automated deployment via GitHub Actions**, add the three variables above as repository secrets under **Settings → Secrets and variables → Actions**, then push a change to `rules/**.yml` on `main`.
+## Security
 
-## Configuration reference
+Every change is gated by automated security scanning — each its own CI check — and all
+GitHub Actions are pinned to immutable commit SHAs (not floating tags):
 
-`configs/agent.conf` configures `syscheck` on Wazuh agents in the `default` group to monitor `.bash_history` files (`/root/.bash_history` and `/home/*/.bash_history`) in real time — this is the telemetry source for the `lnx_clear_cmd_history` detection above.
+- **gitleaks** — full-history secret scanning, so a committed credential is caught on the PR
+  that introduces it.
+- **CodeQL** and **bandit** — Python static analysis (SAST).
+- **pip-audit** — dependency CVE scanning of `requirements.txt`.
+- **Dependabot** — weekly dependency and action updates, with minor/patch bumps grouped.
+  Direct dependencies are tracked via `requirements.in`; `requirements.txt` is the
+  `pip-compile`-generated lock, so transitive pins don't generate their own PRs.
 
-## Strategic Value
-* **Risk Mitigation:** Eliminates manual errors causing SIEM outages.
-* **Traceability:** Every rule modification is tracked via Git commits and Pull Requests.
-* **Operational Maturity:** Infrastructure manages deployment; analysts focus on threat intelligence.
+Never commit `.env` or `.secrets` (both are gitignored). See [`SECURITY.md`](SECURITY.md)
+for the vulnerability-disclosure policy and credential handling, and
+[`CONTRIBUTING.md`](CONTRIBUTING.md) for the contributor workflow.
 
-## Architectural Decisions & Known Limitations
+## Design decisions & known limitations
 
-**pySigma Wazuh Compiler Limitation**
-Currently, there is no official `pysigma-backend-wazuh` package published on the Python Package Index (PyPI). To maintain pipeline integrity without relying on unstable tooling, the architecture implements the following calculated tradeoff:
-
-1. **Validation (CI):** Sigma rules are validated during the Pull Request phase using the `pysigma-backend-elasticsearch` module. This proves the YAML detection logic is structurally correct and fully compilable.
-2. **Deployment (CD):** Because we cannot generate Wazuh XML on the fly via `pip` modules, the Wazuh-compatible `.xml` files are currently maintained in the `rules/wazuh/` directory. The deployment script (`deploy_rule.py`) idempotently pushes these XMLs to the Wazuh Manager via its REST API.
-
-*Future Roadmap: Once a stable pySigma Wazuh backend is officially released, the XML files will be removed from version control entirely. The CI/CD pipeline will be updated to compile the XML artifacts dynamically directly from the Sigma source immediately before deployment.*
-
-**Dry-Run Remote Diff (Unverified)**
-The `--dry-run` flag in `deploy_rule.py` fetches and parses the currently-deployed rule content from the Wazuh API to generate a diff. This parsing logic handles two possible response shapes defensively but has not yet been exercised against a live manager. If the response shape differs from both anticipated cases, the script will report all rules as "NEW FILE" rather than diffing them — this would be a silent misclassification, not an error. *Future work: validate against a live manager and add explicit error logging if the response shape doesn't match either expected case.*
+- **No pySigma Wazuh backend exists**, so Sigma rules are *validated for compilability*
+  using `pysigma-backend-elasticsearch`, while the Wazuh XML is generated by the custom AST
+  walker in `compile_sigma.py`. This is the project's core, not a workaround.
+- **`--dry-run` remote diff is unverified against a live manager.** If the API response
+  shape differs from the two cases handled, it silently treats all rules as new. Validating
+  this against a live manager is tracked future work.
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+[MIT](LICENSE)
