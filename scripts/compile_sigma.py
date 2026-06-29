@@ -141,6 +141,50 @@ def _and_clauses(clause_lists: List[List[Dict[str, List[Dict[str, Any]]]]]) -> L
         result.append(merged)
     return result
 
+# Sigma modifiers the AST walker cannot translate to a sound PCRE2 match. They must
+# fail the build loudly rather than emit a wrong rule. |base64/|base64offset are the
+# dangerous case: by the time the value reaches the leaf, pySigma has already applied
+# the modifier, so a |base64 value is an ordinary string and the walker would happily
+# compile it to an exact-match on the *encoded* literal — a silent false negative.
+# Catching it here, by modifier name, is the only place that information survives.
+UNSUPPORTED_MODIFIERS: Dict[str, str] = {
+    "SigmaBase64Modifier": "base64",
+    "SigmaBase64OffsetModifier": "base64offset",
+}
+
+def _iter_detection_items(detection: Any) -> Any:
+    """Yield every SigmaDetectionItem under a SigmaDetection, recursing into nests."""
+    from sigma.rule import SigmaDetection
+    for element in detection.detection_items:
+        if isinstance(element, SigmaDetection):
+            yield from _iter_detection_items(element)
+        else:
+            yield element
+
+def assert_supported_constructs(rule: SigmaRule) -> None:
+    """Fail loudly on Sigma features the compiler cannot soundly translate.
+
+    Some unsupported constructs are invisible at the AST leaf because pySigma has
+    already rewritten the value (notably |base64, which leaves an ordinary string).
+    Catch those here, before the walk, by inspecting each detection item's modifiers
+    so the build stops with a clear message instead of shipping a false-negative rule.
+    """
+    if not rule.detection or not rule.detection.detections:
+        return
+    for selection_name, detection in rule.detection.detections.items():
+        for item in _iter_detection_items(detection):
+            for modifier in getattr(item, "modifiers", None) or []:
+                name = getattr(modifier, "__name__", str(modifier))
+                if name in UNSUPPORTED_MODIFIERS:
+                    raise NotImplementedError(
+                        f"Unsupported Sigma modifier '|{UNSUPPORTED_MODIFIERS[name]}' on "
+                        f"field '{getattr(item, 'field', '?')}' in selection "
+                        f"'{selection_name}': not implemented. It would compile to an "
+                        f"exact-match on the encoded literal — a silent false-negative "
+                        f"detection. Remove the modifier or add real support before "
+                        f"shipping this rule."
+                    )
+
 def evaluate_ast(node: Any, rule: SigmaRule) -> List[Dict[str, List[Dict[str, Any]]]]:
     """Recursively walks the Sigma AST.
 
@@ -181,20 +225,53 @@ def evaluate_ast(node: Any, rule: SigmaRule) -> List[Dict[str, List[Dict[str, An
 
     else:
         from sigma.conditions import ConditionFieldEqualsValueExpression
-        from sigma.types import SpecialChars
+        from sigma.types import SpecialChars, SigmaString, SigmaNull
 
+        # A non-field leaf (e.g. a field-less keyword match) would otherwise fall
+        # through to a rule with ZERO <field> elements — one that matches every event
+        # in the parent group and floods the SIEM. Reject it loudly instead.
         if not isinstance(node, ConditionFieldEqualsValueExpression):
-            logger.warning(f"Unknown AST node type at leaf: {type(node).__name__}")
-            return [{}]
+            raise NotImplementedError(
+                f"Unsupported Sigma construct: leaf node '{type(node).__name__}' "
+                f"(e.g. a field-less keyword match). It would emit a rule with no "
+                f"<field> constraints that matches every event. Rewrite the detection "
+                f"using explicit field:value pairs."
+            )
 
         field = node.field
+        value = node.value
         wazuh_field = FIELD_MAPPINGS.get(field, field)
 
-        starts_with_wildcard = node.value.startswith(SpecialChars.WILDCARD_MULTI)
-        ends_with_wildcard = node.value.endswith(SpecialChars.WILDCARD_MULTI)
+        # A null value cannot be soundly compiled to a string match.
+        if isinstance(value, SigmaNull):
+            raise ValueError(
+                f"Field '{field}' has a null value, which cannot be compiled to a "
+                f"match. Give the field a concrete value."
+            )
+        # Numeric comparisons (|lt/|gt…), |re, |cidr and |base64offset arrive as value
+        # types the walker can't translate. Reject by type rather than crash later on a
+        # missing string method (the old AttributeError) or emit a wrong rule.
+        if not isinstance(value, SigmaString):
+            raise NotImplementedError(
+                f"Unsupported Sigma value type '{type(value).__name__}' on field "
+                f"'{field}' (e.g. numeric comparison, |re, |cidr, |base64offset). The "
+                f"compiler only supports plain string matching; these are not "
+                f"implemented and must not silently produce a wrong rule."
+            )
+        # An empty value would compile to '(?i)^$' and match only an empty field —
+        # almost certainly unintended, and silent. Reject it.
+        if len(value) == 0:
+            raise ValueError(
+                f"Field '{field}' has an empty value, which would compile to '(?i)^$' "
+                f"and match only an empty field — almost certainly unintended. Give the "
+                f"field a concrete value."
+            )
+
+        starts_with_wildcard = value.startswith(SpecialChars.WILDCARD_MULTI)
+        ends_with_wildcard = value.endswith(SpecialChars.WILDCARD_MULTI)
 
         parts = []
-        for part in node.value:
+        for part in value:
             if part == SpecialChars.WILDCARD_MULTI:
                 parts.append(".*")
             elif part == SpecialChars.WILDCARD_SINGLE:
@@ -267,6 +344,7 @@ def main() -> None:
                 # WE DELETED THE HARDCODED WAZUH_ID CHECK HERE!
 
                 try:
+                    assert_supported_constructs(rule)
                     rule_fields_list = evaluate_ast(rule.detection.parsed_condition[0].parsed, rule)
                 except Exception as e:
                     logger.error(f"Failed to compile AST logic for {rule.id}: {e}")

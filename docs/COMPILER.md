@@ -309,20 +309,24 @@ Honest scope. Verified against the current code:
 
 | Sigma feature | Behavior today |
 |---|---|
-| **Numeric comparisons** (`\|lt \|lte \|gt \|gte`) | **Build-time crash.** The leaf handler calls `node.value.startswith()` (`:193`), which `SigmaCompareExpression` doesn't have. `main` catches it (`:271-274`), logs *"Failed to compile AST logic"*, and the non-zero `skipped` count halts the build (`:329-331`). Fails loud, not silent. |
-| **Regex modifier** (`\|re`) | **Build-time crash**, same path (`SigmaRegularExpression` has no `.startswith`). |
-| **CIDR modifier** (`\|cidr`) | **Build-time crash**, same path (`SigmaCIDRExpression`). |
-| **base64 / base64offset** (`\|base64`, `\|base64offset`) | **Unsound, fails silently.** `\|base64` flows through as a `SigmaString`, so it compiles — but to the *encoded literal* anchored exact-match (e.g. `(?i)^d2hvYW1p$` for `whoami`), with none of the `contains`-wrapping real base64 detection needs; `base64offset`'s three-offset variants aren't generated at all. Don't rely on it. |
-| **Keyword / field-less matching** (a bare list with no field) | **Unsound, fails silently.** Produces a `ConditionValueExpression` leaf, which hits the `else` branch (`:186-188`): logs *"Unknown AST node type at leaf"* and returns `[{}]` — an empty clause that renders a `<rule>` with **no `<field>`s**, matching every event in the parent group. |
+| **Numeric comparisons** (`\|lt \|lte \|gt \|gte`) | **Rejected at build (fails loud).** Reaches the leaf as a non-string value type (`SigmaCompareExpression`); the leaf raises a clear `NotImplementedError` — *"Unsupported Sigma value type"* (`:255`) — which `main` turns into a non-zero exit (`:407-408`). |
+| **Regex modifier** (`\|re`) | **Rejected at build (fails loud)** — same leaf type-check (`SigmaRegularExpression`). |
+| **CIDR modifier** (`\|cidr`) | **Rejected at build (fails loud)** — same leaf type-check (`SigmaCIDRExpression`). |
+| **base64 / base64offset** (`\|base64`, `\|base64offset`) | **Rejected at build (fails loud).** `\|base64` is invisible at the leaf (pySigma leaves an ordinary `SigmaString`), so a pre-walk guard, `assert_supported_constructs` (`:164`), inspects each detection item's modifiers and raises `NotImplementedError` naming the modifier (`:179`). This closes the former silent false negative — an exact-match on the *encoded literal* (`(?i)^d2hvYW1p$` for `whoami`). |
+| **Keyword / field-less matching** (a bare list with no field) | **Rejected at build (fails loud).** The non-field leaf now raises `NotImplementedError` (`:234`) instead of returning `[{}]`, closing the former match-everything rule (a `<rule>` with no `<field>`s). |
+| **Empty / null field value** | **Rejected at build (fails loud).** An empty value (former silent `(?i)^$`) and a `SigmaNull` each raise a clear `ValueError` (`:264`, `:247`). |
 | **`1 of` / `all of` aggregators** | **Supported** — pySigma expands `1 of selection*` into a `ConditionOR` and `all of …` into a `ConditionAND` *before* the walker runs, so they need no special handling. (Listed here because they're commonly assumed unsupported; they aren't.) |
 
-The two genuinely dangerous cases are the silent ones — **base64** and
-**field-less keywords** — because they emit a rule that looks deployed but is
-respectively mis-targeted or match-all. The numeric/regex/CIDR modifiers are safer
-in practice precisely because they stop the build rather than shipping a wrong rule.
-Adding a modifier means teaching the leaf handler (`compile_sigma.py:182-216`) to
-recognise the corresponding pySigma expression type instead of assuming every value
-is a `SigmaString`.
+Every unsupported construct above now **fails the build with a clear message**
+rather than emitting a wrong rule — there are no longer any silent cases. The two
+that used to be silent — **base64** (an exact-match on the encoded literal) and
+**field-less keywords** (a match-everything rule) — were the same class of bug as
+the `(?i)` case-variant evasion: a detection that looks deployed but is mis-targeted
+or porous. They are now rejected at compile time and covered by regression tests in
+`tests/test_compile_sigma.py`. Adding real support for one of these means teaching
+the leaf handler (`compile_sigma.py:226` onward) — or `assert_supported_constructs`
+for modifier-only cases — to translate the corresponding pySigma expression type,
+then removing its guard.
 
 ## Where to look next
 
