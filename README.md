@@ -7,7 +7,7 @@
 [![pip-audit](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/pip-audit.yml/badge.svg)](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/pip-audit.yml)
 ![Python](https://img.shields.io/badge/Python-3.11+-yellow?logo=python)
 ![SIEM](https://img.shields.io/badge/SIEM-Wazuh_v4.9-00AEEF)
-![Tests](https://img.shields.io/badge/tests-35_passing-success)
+![Tests](https://img.shields.io/badge/tests-41_passing-success)
 ![License](https://img.shields.io/badge/License-MIT-success)
 
 Author a threat detection **once** in [Sigma](https://github.com/SigmaHQ/sigma) YAML; a
@@ -21,7 +21,7 @@ peer-reviewed, unit-tested, and mapped to MITRE ATT&CK.
 > to negations, merges same-field literals into Wazuh PCRE2 (lookahead conjunction for
 > positives, alternation for negatives), emits case-insensitive `(?i)` matches to mirror
 > Sigma semantics, and resolves Sigma field names through an external `field_mappings.yaml`
-> — covered by 35 unit tests. For a stage-by-stage trace of how one real rule becomes
+> — covered by 41 unit tests. For a stage-by-stage trace of how one real rule becomes
 > Wazuh PCRE2 XML — AST, DNF, De Morgan, the PCRE2 merge, and the honest scope limits —
 > see [`docs/COMPILER.md`](docs/COMPILER.md).
 
@@ -30,7 +30,7 @@ peer-reviewed, unit-tested, and mapped to MITRE ATT&CK.
 ```bash
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-make all        # clean → compile Sigma → validate IDs → run tests (35 passing)
+make all        # clean → compile Sigma → validate IDs → run tests (41 passing)
 ```
 
 `make all` compiles the 3 example Sigma rules into 14 Wazuh rules (one rule fans out to 12
@@ -131,7 +131,7 @@ pre-commit install                                  # local hooks: validators + 
 python scripts/validate_sigma.py   # Sigma syntax (sigma-cli)
 python scripts/compile_sigma.py    # Sigma → build/wazuh/*.xml
 python scripts/check_rule_ids.py   # ID conventions + Sigma↔Wazuh linkage
-pytest -v tests/                   # 35 tests covering compiler + deploy
+pytest -v tests/                   # 41 tests covering compiler + deploy
 # or simply:  make all
 ```
 
