@@ -39,7 +39,9 @@ they reach `dev`/`main`.
 
 - *A committed secret.* The Wazuh API password, a `.env`, or a CA key gets
   committed. This has already happened once in this repo's history (the
-  `MyS3cr37P450r…` lab credential, since rotated).
+  `MyS3cr37P450r…` lab credential). It is **remediated by rotation** — the leaked
+  value is dead on the Wazuh manager — so the string remaining in history is inert.
+  The history was deliberately *not* rewritten (see Controls below).
 - *A malicious or careless rule/code change.* A Sigma rule or a compiler edit that,
   once compiled and deployed, weakens the live ruleset (e.g. a rule that never
   fires, or a compiler change that drops rules).
@@ -53,7 +55,11 @@ they reach `dev`/`main`.
   fails the check. `.gitleaks.toml` extends the default ruleset and allowlists
   exactly the two historical commits holding the already-rotated lab credential;
   the allowlist is scoped to those commit SHAs, so it does not weaken detection on
-  any other commit, past or future. A history scrub is tracked in `SECURITY.md`.
+  any other commit, past or future. A history rewrite was considered and
+  **declined**: the leaked value is dead (rotated), every branch in the repo
+  descends from the leaked commit so a scrub would force-rewrite the entire branch
+  set, and GitHub would still cache the old commit by SHA. The string is retained
+  in history as an inert artifact; see `SECURITY.md` for the full rationale.
 - **`.env` and `.secrets` are gitignored**; secrets live in GitHub Actions secrets,
   not the tree.
 - **`check_rule_ids.py` gates the registry**: Wazuh IDs must be integers ≥ 200000
@@ -229,8 +235,12 @@ is explicit rather than implied-safe:
 - **Self-hosted CD runner is a trusted host.** A compromise of that machine
   exposes the Wazuh credentials in the `deploy` job's environment. Hardening the
   runner host is outside this repo.
-- **gitleaks history allowlist** keeps two historical commits whitelisted until the
-  git history is rewritten; the underlying credential is already rotated, so this is
-  a hygiene item, not a live exposure.
+- **Inert leaked string retained in history.** The `MyS3cr37P450r…` lab credential
+  remains visible in two historical commits. It is remediated by rotation (the value
+  is dead), and a history rewrite was deliberately declined (whole-repo blast radius
+  + GitHub SHA caching for a low-risk dead value). The gitleaks allowlist keeps those
+  two commits whitelisted to keep the scan green; it is scoped to those SHAs only.
+  (`WazuhDeploy2026!` was *never* committed — `.gitignore` caught it — so it is not
+  a history item at all.)
 - **`diskcache` `CVE-2025-69872`** is accepted via pip-audit ignore until pySigma
   ships a patched transitive dependency.
