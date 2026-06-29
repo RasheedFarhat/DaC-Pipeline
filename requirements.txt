@@ -8,7 +8,7 @@ annotated-types==0.7.0
     # via pydantic
 ast-serialize==0.5.0
     # via mypy
-certifi==2026.5.20
+certifi==2026.6.17
     # via requests
 cfgv==3.5.0
     # via pre-commit
