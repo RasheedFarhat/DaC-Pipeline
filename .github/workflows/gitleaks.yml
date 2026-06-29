@@ -1,0 +1,31 @@
+name: gitleaks
+
+# Secret scanning. Runs on every push and PR over the FULL git history
+# (fetch-depth: 0), so a credential committed anywhere — not just in the new
+# commits — is caught. This is the control that stops another hardcoded-password
+# leak (see the historical MyS3cr37P450r incident) from recurring.
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    name: gitleaks (secret scan, full history)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Repo-root .gitleaks.toml extends the default ruleset and allowlists the
+          # two historical commits holding the already-rotated lab credential.

@@ -1,6 +1,10 @@
 # Detection-as-Code (DaC) CI/CD Pipeline
 
 [![CI/CD Validation](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/check_rule_ids.yml/badge.svg)](https://github.com/RasheedFarhat/DaC-Pipeline/actions)
+[![gitleaks](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/gitleaks.yml/badge.svg)](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/gitleaks.yml)
+[![CodeQL](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/codeql.yml/badge.svg)](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/codeql.yml)
+[![bandit](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/bandit.yml/badge.svg)](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/bandit.yml)
+[![pip-audit](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/pip-audit.yml/badge.svg)](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/pip-audit.yml)
 ![Release](https://img.shields.io/badge/Release-v1.0.0-blue)
 ![Python](https://img.shields.io/badge/Python-3.10+-yellow?logo=python)
 ![SIEM](https://img.shields.io/badge/SIEM-Wazuh_v4.9-00AEEF)
