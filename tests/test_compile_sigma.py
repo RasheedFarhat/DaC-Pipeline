@@ -7,14 +7,24 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'scripts'))
 
 from sigma.collection import SigmaCollection
-from compile_sigma import evaluate_ast, extract_mitre_techniques, template, FIELD_MAPPINGS
+from compile_sigma import (
+    assert_supported_constructs,
+    evaluate_ast,
+    extract_mitre_techniques,
+    template,
+    FIELD_MAPPINGS,
+)
 
 WIN_CMD = "win.eventdata.commandLine"
 WIN_IMG = "win.eventdata.image"
 
 
 def _compile(detection: str):
-    """Build a Sigma rule with the given detection block and return evaluate_ast output."""
+    """Build a Sigma rule with the given detection block and return evaluate_ast output.
+
+    Mirrors the real compile path in main(): unsupported constructs are rejected
+    (assert_supported_constructs) before the AST is walked.
+    """
     yaml_text = (
         "title: test\n"
         "id: 00000000-0000-0000-0000-000000000000\n"
@@ -25,6 +35,7 @@ def _compile(detection: str):
         f"{detection}\n"
     )
     rule = SigmaCollection.from_yaml(yaml_text).rules[0]
+    assert_supported_constructs(rule)
     return evaluate_ast(rule.detection.parsed_condition[0].parsed, rule)
 
 
@@ -161,6 +172,52 @@ def test_mixed_polarity_emits_two_field_literals():
     assert len(lits) == 2
     assert {"pattern": "(?i).*foo.*", "negate": False} in lits
     assert {"pattern": "(?i).*bar.*", "negate": True} in lits
+
+
+# --- Fail-loud on unsound constructs --------------------------------------------
+# Each of these used to compile to a silently-wrong rule (a false negative or a
+# match-everything rule). They must now raise at compile time, the way numeric/|re
+# values already crash, rather than ship a broken detection.
+
+def test_base64_modifier_rejected():
+    # |base64 left the value as the *encoded* literal, compiling to an exact-match
+    # false negative. Must raise, naming the modifier.
+    with pytest.raises(NotImplementedError, match=r"\|base64\b"):
+        _compile("    sel:\n        CommandLine|base64: whoami\n    condition: sel")
+
+
+def test_base64offset_modifier_rejected():
+    with pytest.raises(NotImplementedError, match=r"\|base64offset\b"):
+        _compile(
+            "    sel:\n"
+            "        CommandLine|base64offset|contains: whoami\n"
+            "    condition: sel"
+        )
+
+
+def test_empty_value_rejected():
+    # An empty value compiled to '(?i)^$' (matches only an empty field). Must raise.
+    with pytest.raises(ValueError, match="empty value"):
+        _compile("    sel:\n        CommandLine: ''\n    condition: sel")
+
+
+def test_null_value_rejected():
+    with pytest.raises(ValueError, match="null value"):
+        _compile("    sel:\n        CommandLine:\n    condition: sel")
+
+
+def test_fieldless_keyword_rejected():
+    # A field-less keyword list produced a rule with no <field> elements — i.e. one
+    # that matches every event. Must raise instead.
+    with pytest.raises(NotImplementedError, match="field-less"):
+        _compile("    keywords:\n        - evil\n    condition: keywords")
+
+
+def test_unsupported_value_type_rejected():
+    # Numeric comparison (|gt) reaches the leaf as a non-string value type; it must
+    # raise a clear error rather than crash on a missing string method.
+    with pytest.raises(NotImplementedError, match="Unsupported Sigma value type"):
+        _compile("    sel:\n        DestinationPort|gt: 1024\n    condition: sel")
 
 
 # --- Template: negate="yes" rendering -------------------------------------------
