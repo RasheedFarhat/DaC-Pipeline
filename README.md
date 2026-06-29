@@ -206,8 +206,10 @@ GitHub Actions are pinned to immutable commit SHAs (not floating tags):
   Direct dependencies are tracked via `requirements.in`; `requirements.txt` is the
   `pip-compile`-generated lock, so transitive pins don't generate their own PRs.
 
-Never commit `.env` or `.secrets` (both are gitignored). See [`SECURITY.md`](SECURITY.md)
-for the vulnerability-disclosure policy and credential handling, and
+Never commit `.env` or `.secrets` (both are gitignored). See
+[`THREAT_MODEL.md`](THREAT_MODEL.md) for the pipeline's trust boundaries, supply-chain
+surface, and the rationale behind the deploy safeguards; [`SECURITY.md`](SECURITY.md)
+for the vulnerability-disclosure policy and credential handling; and
 [`CONTRIBUTING.md`](CONTRIBUTING.md) for the contributor workflow.
 
 ## Design decisions & known limitations
