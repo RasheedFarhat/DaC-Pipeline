@@ -2,6 +2,7 @@ build:
   sigma_dir: "rules/sigma"
   wazuh_dir: "build/wazuh"
   template_dir: "templates"
+  field_mappings: "field_mappings.yaml"
 
 deploy:
   api_url: "https://localhost:55000"

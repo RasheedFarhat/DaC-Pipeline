@@ -1,0 +1,28 @@
+# Sigma field name -> Wazuh decoder field name.
+#
+# compile_sigma.py uses this to translate Sigma detection fields into the field
+# names Wazuh's decoders actually populate. A Sigma field with no entry here is
+# passed through unchanged, which usually means the rule will never fire (the
+# decoder doesn't produce that field), so add new mappings as rules need them.
+
+# --- Sysmon Event ID 1: process creation -> win.eventdata.* ---
+Image: win.eventdata.image
+OriginalFileName: win.eventdata.originalFileName
+CommandLine: win.eventdata.commandLine
+CurrentDirectory: win.eventdata.currentDirectory
+User: win.eventdata.user
+LogonId: win.eventdata.logonId
+IntegrityLevel: win.eventdata.integrityLevel
+Hashes: win.eventdata.hashes
+ParentImage: win.eventdata.parentImage
+ParentCommandLine: win.eventdata.parentCommandLine
+ProcessId: win.eventdata.processId
+ParentProcessId: win.eventdata.parentProcessId
+
+# --- Other Sysmon fields (registry / network) ---
+TargetObject: win.eventdata.targetObject
+DestinationPort: win.eventdata.destinationPort
+SourceIp: win.eventdata.sourceIp
+
+# --- Linux file integrity monitoring (syscheck) ---
+file: syscheck.path
