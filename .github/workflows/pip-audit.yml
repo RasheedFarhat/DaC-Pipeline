@@ -1,0 +1,32 @@
+name: pip-audit
+
+# Dependency vulnerability scan of requirements.txt. Fails the build on any known
+# CVE in a pinned dependency.
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+permissions:
+  contents: read
+
+jobs:
+  pip-audit:
+    name: pip-audit (dependency CVE scan)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.11'
+      - name: Install pip-audit
+        run: pip install pip-audit
+      - name: Audit requirements.txt (fail on known CVE)
+        # CVE-2025-69872 (diskcache 5.6.3) is ignored: it is a transitive dependency
+        # of pySigma with no fixed release available upstream yet. Tracked for removal
+        # once pySigma ships a patched diskcache. All other CVEs fail the build.
+        run: pip-audit -r requirements.txt --ignore-vuln CVE-2025-69872

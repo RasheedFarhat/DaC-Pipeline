@@ -1,0 +1,18 @@
+title = "gitleaks config — DaC-Pipeline"
+
+# Keep the full upstream gitleaks ruleset...
+[extend]
+useDefault = true
+
+# ...but allowlist the two historical commits that contain a now-dead lab
+# credential (the "MyS3cr37P450r.*-" Wazuh password that was later moved to env
+# vars). The credential has been rotated and a full history scrub is tracked in
+# SECURITY.md. This entry keeps the secret scan green for the rest of history and
+# all FUTURE commits while that scrub is scheduled — it does not weaken detection
+# anywhere else. Remove this block once the history has been rewritten.
+[allowlist]
+description = "Known historical lab credential — rotated; history scrub tracked in SECURITY.md"
+commits = [
+  "b0ba093d96ec3a3a6a6a6c046355a79d50abed9d",
+  "a76308ce6a111b32bc910db4209380ab94b3f849",
+]
