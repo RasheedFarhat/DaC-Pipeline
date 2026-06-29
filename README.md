@@ -21,7 +21,9 @@ peer-reviewed, unit-tested, and mapped to MITRE ATT&CK.
 > to negations, merges same-field literals into Wazuh PCRE2 (lookahead conjunction for
 > positives, alternation for negatives), emits case-insensitive `(?i)` matches to mirror
 > Sigma semantics, and resolves Sigma field names through an external `field_mappings.yaml`
-> — covered by 35 unit tests.
+> — covered by 35 unit tests. For a stage-by-stage trace of how one real rule becomes
+> Wazuh PCRE2 XML — AST, DNF, De Morgan, the PCRE2 merge, and the honest scope limits —
+> see [`docs/COMPILER.md`](docs/COMPILER.md).
 
 ## 30-second tour
 
