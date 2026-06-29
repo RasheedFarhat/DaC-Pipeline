@@ -34,23 +34,23 @@ def _compile(detection: str):
 
 def test_contains_is_unanchored():
     res = _compile("    sel:\n        CommandLine|contains: foo\n    condition: sel")
-    assert res == [{WIN_CMD: [{"pattern": ".*foo.*", "negate": False}]}]
+    assert res == [{WIN_CMD: [{"pattern": "(?i).*foo.*", "negate": False}]}]
 
 
 def test_startswith_anchors_start_only():
     res = _compile("    sel:\n        CommandLine|startswith: foo\n    condition: sel")
-    assert res == [{WIN_CMD: [{"pattern": "^foo.*", "negate": False}]}]
+    assert res == [{WIN_CMD: [{"pattern": "(?i)^foo.*", "negate": False}]}]
 
 
 def test_endswith_anchors_end_only():
     res = _compile("    sel:\n        Image|endswith: '\\foo.exe'\n    condition: sel")
-    expected = ".*" + re.escape("\\foo.exe") + "$"
+    expected = "(?i).*" + re.escape("\\foo.exe") + "$"
     assert res == [{WIN_IMG: [{"pattern": expected, "negate": False}]}]
 
 
 def test_exact_match_is_fully_anchored():
     res = _compile("    sel:\n        CommandLine: foo\n    condition: sel")
-    assert res == [{WIN_CMD: [{"pattern": "^foo$", "negate": False}]}]
+    assert res == [{WIN_CMD: [{"pattern": "(?i)^foo$", "negate": False}]}]
 
 
 # --- AND / OR -------------------------------------------------------------------
@@ -76,7 +76,7 @@ def test_and_same_field_merges_with_lookaheads():
         "            - bar\n"
         "    condition: sel"
     )
-    assert res == [{WIN_CMD: [{"pattern": "(?=.*.*foo.*)(?=.*.*bar.*)", "negate": False}]}]
+    assert res == [{WIN_CMD: [{"pattern": "(?=.*(?i).*foo.*)(?=.*(?i).*bar.*)", "negate": False}]}]
 
 
 def test_or_produces_separate_clauses():
@@ -88,8 +88,8 @@ def test_or_produces_separate_clauses():
         "    condition: sel"
     )
     assert res == [
-        {WIN_CMD: [{"pattern": ".*foo.*", "negate": False}]},
-        {WIN_CMD: [{"pattern": ".*bar.*", "negate": False}]},
+        {WIN_CMD: [{"pattern": "(?i).*foo.*", "negate": False}]},
+        {WIN_CMD: [{"pattern": "(?i).*bar.*", "negate": False}]},
     ]
 
 
@@ -97,7 +97,7 @@ def test_or_produces_separate_clauses():
 
 def test_not_single_leaf_sets_negate():
     res = _compile("    sel:\n        CommandLine|contains: foo\n    condition: not sel")
-    assert res == [{WIN_CMD: [{"pattern": ".*foo.*", "negate": True}]}]
+    assert res == [{WIN_CMD: [{"pattern": "(?i).*foo.*", "negate": True}]}]
 
 
 def test_not_over_and_becomes_or_of_negations():
@@ -110,8 +110,8 @@ def test_not_over_and_becomes_or_of_negations():
     )
     assert len(res) == 2
     assert all(len(clause) == 1 for clause in res)
-    assert {WIN_CMD: [{"pattern": ".*foo.*", "negate": True}]} in res
-    assert {WIN_IMG: [{"pattern": ".*bar\\.exe$", "negate": True}]} in res
+    assert {WIN_CMD: [{"pattern": "(?i).*foo.*", "negate": True}]} in res
+    assert {WIN_IMG: [{"pattern": "(?i).*bar\\.exe$", "negate": True}]} in res
 
 
 def test_not_over_or_becomes_and_of_negations():
@@ -125,8 +125,8 @@ def test_not_over_or_becomes_and_of_negations():
     )
     assert len(res) == 1
     clause = res[0]
-    assert clause[WIN_CMD] == [{"pattern": ".*foo.*", "negate": True}]
-    assert clause[WIN_IMG] == [{"pattern": ".*bar\\.exe$", "negate": True}]
+    assert clause[WIN_CMD] == [{"pattern": "(?i).*foo.*", "negate": True}]
+    assert clause[WIN_IMG] == [{"pattern": "(?i).*bar\\.exe$", "negate": True}]
 
 
 def test_not_over_same_field_or_uses_negated_alternation():
@@ -138,12 +138,12 @@ def test_not_over_same_field_or_uses_negated_alternation():
         "            - bar\n"
         "    condition: not sel"
     )
-    assert res == [{WIN_CMD: [{"pattern": "(?:.*foo.*)|(?:.*bar.*)", "negate": True}]}]
+    assert res == [{WIN_CMD: [{"pattern": "(?:(?i).*foo.*)|(?:(?i).*bar.*)", "negate": True}]}]
 
 
 def test_double_negation_returns_positive():
     res = _compile("    sel:\n        CommandLine|contains: foo\n    condition: not (not sel)")
-    assert res == [{WIN_CMD: [{"pattern": ".*foo.*", "negate": False}]}]
+    assert res == [{WIN_CMD: [{"pattern": "(?i).*foo.*", "negate": False}]}]
 
 
 def test_mixed_polarity_emits_two_field_literals():
@@ -159,8 +159,8 @@ def test_mixed_polarity_emits_two_field_literals():
     assert len(res) == 1
     lits = res[0][WIN_CMD]
     assert len(lits) == 2
-    assert {"pattern": ".*foo.*", "negate": False} in lits
-    assert {"pattern": ".*bar.*", "negate": True} in lits
+    assert {"pattern": "(?i).*foo.*", "negate": False} in lits
+    assert {"pattern": "(?i).*bar.*", "negate": True} in lits
 
 
 # --- Template: negate="yes" rendering -------------------------------------------
@@ -212,3 +212,32 @@ def test_mitre_drops_tactics_and_other_namespaces():
 def test_mitre_mixed_tags():
     tags = ["attack.command_and_control", "attack.t1105", "attack.t1070.003", "attack.g0016"]
     assert extract_mitre_techniques(tags) == ["T1105", "T1070.003"]
+
+
+# --- Case-insensitivity (regression for the casing-evasion false negative) -------
+
+def _compile_repo_rule(filename: str):
+    """Compile a real shipped Sigma rule from rules/sigma/ and return its clauses."""
+    path = os.path.join(os.path.dirname(__file__), "..", "rules", "sigma", filename)
+    with open(path) as f:
+        rule = SigmaCollection.from_yaml(f.read()).rules[0]
+    return evaluate_ast(rule.detection.parsed_condition[0].parsed, rule)
+
+
+def test_compiled_certutil_rule_matches_any_casing():
+    """Sigma string matching is case-insensitive by default; the compiled Wazuh
+    pcre2 pattern must fire on any casing of certutil.exe. Without an inline (?i)
+    flag, `CertUtil.exe` / `CERTUTIL.EXE` evade the rule — a trivial, silent
+    false negative. This asserts against the actual shipped detection.
+    """
+    clauses = _compile_repo_rule("sysmon_certutil_download.yml")
+    image_patterns = [lit["pattern"] for clause in clauses for lit in clause.get(WIN_IMG, [])]
+    assert image_patterns, "expected an Image-field literal in the compiled certutil rule"
+    pattern = image_patterns[0]
+
+    for sample in (
+        r"C:\Windows\System32\certutil.exe",
+        r"C:\Windows\System32\CertUtil.exe",
+        r"C:\Windows\System32\CERTUTIL.EXE",
+    ):
+        assert re.search(pattern, sample), f"{sample!r} evaded pattern {pattern!r}"
