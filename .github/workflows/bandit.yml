@@ -1,0 +1,39 @@
+name: bandit
+
+# Python-specific SAST over scripts/. The first run prints the full report and
+# never fails (visibility); the second run gates the build on Medium+ severity
+# findings, skipping IDs triaged as false positives for this repo (justified
+# inline below).
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+permissions:
+  contents: read
+
+jobs:
+  bandit:
+    name: bandit (Python SAST)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.11'
+      - name: Install bandit
+        run: pip install bandit
+      - name: Full report (non-gating, for visibility)
+        run: bandit -r scripts/ --exit-zero
+      - name: Gate on Medium+ severity
+        # Skipped IDs (triaged — see PR description):
+        #   B105      "OFFLINE_DRY_RUN_TOKEN" is a sentinel constant, not a credential.
+        #   B404,B603 sigma-cli is run via a resolved absolute path with list args,
+        #             no shell and no untrusted input.
+        #   B405,B314 xml.etree parses build output this pipeline just generated,
+        #             not untrusted external input (XXE/billion-laughs not reachable).
+        run: bandit -r scripts/ --severity-level medium --skip B105,B404,B603,B405,B314

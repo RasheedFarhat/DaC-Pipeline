@@ -1,0 +1,20 @@
+version: 2
+updates:
+  # Python dependencies (requirements.txt) — weekly CVE/version updates.
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "deps"
+
+  # GitHub Actions — keeps the SHA-pinned actions current (Dependabot bumps the
+  # pinned commit and updates the trailing version comment).
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "ci"
