@@ -12,3 +12,18 @@ repos:
       - id: mypy
         additional_dependencies: [types-requests, types-PyYAML]
         args: [--ignore-missing-imports]
+
+  - repo: local
+    hooks:
+      - id: validate-sigma
+        name: validate Sigma syntax
+        entry: python scripts/validate_sigma.py
+        language: system
+        pass_filenames: false
+        files: ^rules/sigma/.*\.ya?ml$
+      - id: check-rule-ids
+        name: compile + validate rule IDs
+        entry: bash -c 'python scripts/compile_sigma.py && python scripts/check_rule_ids.py'
+        language: system
+        pass_filenames: false
+        files: ^(rules/sigma/|scripts/compile_sigma\.py|templates/).*
