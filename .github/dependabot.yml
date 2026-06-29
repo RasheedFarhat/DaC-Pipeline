@@ -1,20 +1,35 @@
 version: 2
 updates:
   # Python dependencies (requirements.txt) — weekly CVE/version updates.
+  # Minor + patch bumps are collapsed into a single grouped PR to avoid a flood;
+  # major bumps still open individually so they get reviewed on their own.
   - package-ecosystem: pip
     directory: "/"
     schedule:
       interval: weekly
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     commit-message:
       prefix: "deps"
+    groups:
+      python-minor:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
 
   # GitHub Actions — keeps the SHA-pinned actions current (Dependabot bumps the
-  # pinned commit and updates the trailing version comment).
+  # pinned commit and updates the trailing version comment). Minor + patch bumps
+  # grouped; majors open individually.
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: weekly
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     commit-message:
       prefix: "ci"
+    groups:
+      actions:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
