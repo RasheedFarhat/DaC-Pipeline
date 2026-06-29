@@ -4,9 +4,9 @@
 # or keep using `pip freeze > requirements.txt` if you prefer.
 
 # --- Compile & validate Sigma -------------------------------------------------
-pySigma==1.3.3
+pySigma==1.4.0
 sigma-cli==3.0.2
-pySigma-backend-elasticsearch==2.0.3   # proves Sigma compilability in CI
+pySigma-backend-elasticsearch==2.1.0   # proves Sigma compilability in CI
 pysigma-pipeline-sysmon==2.0.0
 Jinja2==3.1.6                          # Wazuh XML template rendering
 PyYAML==6.0.3
@@ -19,7 +19,7 @@ python-dotenv==1.2.2                   # .env loading via pydantic-settings
 tenacity==9.1.4                        # retry/backoff on transient API failures
 
 # --- Dev / test / lint --------------------------------------------------------
-pytest==9.1.0
+pytest==9.1.1
 responses==0.26.1                      # mock Wazuh API in tests
 pre-commit==4.6.0
 mypy==2.1.0
