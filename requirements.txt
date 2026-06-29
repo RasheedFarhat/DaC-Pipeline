@@ -62,7 +62,7 @@ pluggy==1.6.0
     # via pytest
 pre-commit==4.6.0
     # via -r requirements.in
-prettytable==3.17.0
+prettytable==3.18.0
     # via sigma-cli
 pydantic==2.13.4
     # via
