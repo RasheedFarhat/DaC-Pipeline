@@ -98,6 +98,23 @@ def test_deploy_rules_bundles_complete_set(tmp_path):
     assert deploy_rules("OFFLINE_DRY_RUN_TOKEN", _settings(str(build)), False, dry_run=True) is True
 
 
+@responses.activate
+def test_deploy_rules_put_includes_overwrite_true(tmp_path):
+    """Without overwrite=true, the Wazuh API 200s but silently skips the write when the
+    bundle file already exists (confirmed against a live manager: HTTP 200, body
+    'error': 1, file on disk untouched). The PUT must always request overwrite=true."""
+    build = tmp_path / "build"
+    build.mkdir()
+    (build / "r1.xml").write_text('<group name="x">\n  <rule id="200001" level="10"/>\n</group>')
+
+    bundle_url = "https://localhost:55000/rules/files/sigma_custom_rules.xml"
+    responses.add(responses.PUT, bundle_url, json={"error": 0}, status=200)
+
+    assert deploy_rules("TOKEN", _settings(str(build)), False, dry_run=False) is True
+    assert len(responses.calls) == 1
+    assert responses.calls[0].request.url == bundle_url + "?overwrite=true"
+
+
 # --- 401 token refresh -----------------------------------------------------------
 
 RULES_URL = "https://localhost:55000/rules/files/x.xml"
