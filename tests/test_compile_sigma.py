@@ -220,6 +220,20 @@ def test_unsupported_value_type_rejected():
         _compile("    sel:\n        DestinationPort|gt: 1024\n    condition: sel")
 
 
+def test_and_cartesian_product_over_cap_rejected():
+    # Each ANDed selection with N OR'd values multiplies the DNF clause count. Four
+    # selections of 10 values each would explode to 10**4 = 10000 clauses -- must
+    # raise instead of materializing (and hanging on) the full cartesian product.
+    values = "\n".join(f"            - v{i}" for i in range(10))
+    detection = "\n".join(
+        f"    sel{n}:\n        {field}|contains:\n{values}"
+        for n, field in enumerate(["CommandLine", "Image", "CommandLine", "Image"])
+    )
+    detection += "\n    condition: sel0 and sel1 and sel2 and sel3"
+    with pytest.raises(ValueError, match="cartesian product too large"):
+        _compile(detection)
+
+
 # --- Template: negate="yes" rendering -------------------------------------------
 
 def _render(fields):
