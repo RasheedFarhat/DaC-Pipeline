@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 # Add the scripts directory to the path so we can import our deployment script
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../scripts')))
-from deploy_rule import safe_api_request, deploy_rules, Settings, authed_request
+from deploy_rule import safe_api_request, deploy_rules, reconcile_state, Settings, authed_request
 
 # --- Constants for Testing ---
 TEST_URL = 'https://localhost:55000/test_endpoint'
@@ -113,6 +113,71 @@ def test_deploy_rules_put_includes_overwrite_true(tmp_path):
     assert deploy_rules("TOKEN", _settings(str(build)), False, dry_run=False) is True
     assert len(responses.calls) == 1
     assert responses.calls[0].request.url == bundle_url + "?overwrite=true"
+
+
+@responses.activate
+def test_deploy_rules_put_body_error_is_not_treated_as_success(tmp_path):
+    """overwrite=true fixes the "already exists" no-op, but Wazuh can still 200 a PUT
+    with a body-level failure for other reasons (confirmed live: this is the same
+    HTTP-200-but-body-says-error shape). deploy_rules must not log success or return
+    True when that happens."""
+    build = tmp_path / "build"
+    build.mkdir()
+    (build / "r1.xml").write_text('<group name="x">\n  <rule id="200001" level="10"/>\n</group>')
+
+    bundle_url = "https://localhost:55000/rules/files/sigma_custom_rules.xml"
+    responses.add(
+        responses.PUT, bundle_url, status=200,
+        json={"error": 1, "total_failed_items": 1, "message": "Rule content is invalid"},
+    )
+
+    assert deploy_rules("TOKEN", _settings(str(build)), False, dry_run=False) is False
+
+
+# --- Orphan reconciliation: DELETE must check the body, not just HTTP status -----
+
+RULES_LIST_URL = "https://localhost:55000/rules/files"
+
+
+@responses.activate
+def test_reconcile_state_deletes_orphaned_file_on_real_success():
+    """Sanity check: a genuinely successful DELETE (200, error:0) is still logged
+    and doesn't raise -- the body check must not reject legitimate successes."""
+    responses.add(
+        responses.GET, RULES_LIST_URL, status=200,
+        json={"data": {"affected_items": [{"filename": "orphan.xml", "path": "etc/rules/orphan.xml"}]}},
+    )
+    delete_url = "https://localhost:55000/rules/files/orphan.xml"
+    responses.add(responses.DELETE, delete_url, status=200, json={"error": 0, "total_failed_items": 0})
+
+    reconcile_state("TOKEN", _settings("/nonexistent"), False, dry_run=False)
+
+    delete_calls = [c for c in responses.calls if c.request.method == "DELETE"]
+    assert len(delete_calls) == 1
+
+
+@responses.activate
+def test_reconcile_state_does_not_log_success_when_delete_body_reports_failure():
+    """DELETE of a file that's already gone (or fails server-side) still returns
+    HTTP 200 (confirmed against a live manager: body 'error': 1, file untouched).
+    reconcile_state must not claim the orphan was deleted when it wasn't."""
+    responses.add(
+        responses.GET, RULES_LIST_URL, status=200,
+        json={"data": {"affected_items": [{"filename": "orphan.xml", "path": "etc/rules/orphan.xml"}]}},
+    )
+    delete_url = "https://localhost:55000/rules/files/orphan.xml"
+    responses.add(
+        responses.DELETE, delete_url, status=200,
+        json={"error": 1, "total_failed_items": 1,
+              "failed_items": [{"error": {"message": "File does not exist"}}]},
+    )
+
+    with patch("deploy_rule.logger") as mock_logger:
+        reconcile_state("TOKEN", _settings("/nonexistent"), False, dry_run=False)
+
+        success_logs = [c for c in mock_logger.info.call_args_list if "Deleted orphaned rule" in str(c)]
+        assert success_logs == [], "must not log a false success for a delete that failed"
+        assert mock_logger.error.called, "the body-level failure must surface as an error"
 
 
 # --- 401 token refresh -----------------------------------------------------------
