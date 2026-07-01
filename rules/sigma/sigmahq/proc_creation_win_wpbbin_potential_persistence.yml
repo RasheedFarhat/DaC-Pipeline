@@ -1,0 +1,28 @@
+# Imported from SigmaHQ (https://github.com/SigmaHQ/sigma.git)
+# Source path: rules/windows/process_creation/proc_creation_win_wpbbin_potential_persistence.yml
+# Pinned ref: r2026-04-01 (0e3b749e0d85cd943706ed610a1447f0d54e8388)
+# License: Detection Rule License (DRL) 1.1 — see THIRD_PARTY_NOTICES.md (https://github.com/SigmaHQ/Detection-Rule-License)
+# Imported: 2026-07-01, verified compiled clean by scripts/sigmahq_coverage.py
+title: UEFI Persistence Via Wpbbin - ProcessCreation
+id: 4abc0ec4-db5a-412f-9632-26659cddf145
+status: test
+description: Detects execution of the binary "wpbbin" which is used as part of the UEFI based persistence method described in the reference section
+references:
+    - https://grzegorztworek.medium.com/using-uefi-to-inject-executable-files-into-bitlocker-protected-drives-8ff4ca59c94c
+    - https://persistence-info.github.io/Data/wpbbin.html
+author: Nasreddine Bencherchali (Nextron Systems)
+date: 2022-07-18
+tags:
+    - attack.persistence
+    - attack.defense-evasion
+    - attack.t1542.001
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    selection:
+        Image: 'C:\Windows\System32\wpbbin.exe'
+    condition: selection
+falsepositives:
+    - Legitimate usage of the file by hardware manufacturer such as lenovo (Thanks @0gtweet for the tip)
+level: high

@@ -1,0 +1,34 @@
+# Imported from SigmaHQ (https://github.com/SigmaHQ/sigma.git)
+# Source path: rules/windows/process_creation/proc_creation_win_mshta_http.yml
+# Pinned ref: r2026-04-01 (0e3b749e0d85cd943706ed610a1447f0d54e8388)
+# License: Detection Rule License (DRL) 1.1 — see THIRD_PARTY_NOTICES.md (https://github.com/SigmaHQ/Detection-Rule-License)
+# Imported: 2026-07-01, verified compiled clean by scripts/sigmahq_coverage.py
+title: Remotely Hosted HTA File Executed Via Mshta.EXE
+id: b98d0db6-511d-45de-ad02-e82a98729620
+status: test
+description: Detects execution of the "mshta" utility with an argument containing the "http" keyword, which could indicate that an attacker is executing a remotely hosted malicious hta file
+references:
+    - https://www.trendmicro.com/en_us/research/22/e/avoslocker-ransomware-variant-abuses-driver-file-to-disable-anti-Virus-scans-log4shell.html
+author: Nasreddine Bencherchali (Nextron Systems)
+date: 2022-08-08
+modified: 2023-02-06
+tags:
+    - attack.defense-evasion
+    - attack.execution
+    - attack.t1218.005
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_img:
+        - Image|endswith: '\mshta.exe'
+        - OriginalFileName: 'MSHTA.EXE'
+    selection_cli:
+        CommandLine|contains:
+            - 'http://'
+            - 'https://'
+            - 'ftp://'
+    condition: all of selection_*
+falsepositives:
+    - Unknown
+level: high
