@@ -151,22 +151,32 @@ def deploy_rules(token: str, settings: Settings, tls_verify: Union[bool, str], d
         logger.error("CRITICAL: No XML rule files found in build directory.")
         sys.exit(1)
 
-    # Bundle all rules into a single file to avoid Wazuh restart race condition
+    # Bundle all rules into a single file to avoid Wazuh restart race condition.
+    # Each compiled file already carries its own product/service group (e.g.
+    # "windows, custom_sigma" -- see templates/wazuh_rule.xml.j2), which Wazuh uses
+    # for group:windows / group:linux filtering downstream. Collapsing everything
+    # into one generic "custom_sigma" group on bundling silently discarded that
+    # membership for all rules (confirmed against a live manager). Wazuh natively
+    # supports multiple top-level <group> elements in one rules file (its own
+    # ruleset/rules/*.xml ship this way), so instead of one master group we emit
+    # one <group name="X"> block per distinct group name, preserving each rule's
+    # original membership.
     import re as _re
-    rule_inner_blocks = []
+    from collections import defaultdict
+    groups: Dict[str, List[str]] = defaultdict(list)
     bundled_count = 0
     for filename in xml_files:
         filepath = os.path.join(settings.wazuh_dir, filename)
         with open(filepath, 'r') as f:
             file_content = f.read()
-        # Extract inner content BETWEEN <group> tags (not the tags themselves)
-        match = _re.search(r'<group[^>]*>(.*?)</group>', file_content, _re.DOTALL)
+        # Capture both the group name and the inner content between the tags.
+        match = _re.search(r'<group\s+name="([^"]*)"[^>]*>(.*?)</group>', file_content, _re.DOTALL)
         if match:
-            rule_inner_blocks.append(f'  <!-- Source: {filename} -->')
-            rule_inner_blocks.append(match.group(1).strip())
+            group_name, inner_content = match.group(1), match.group(2)
+            groups[group_name].append(f'  <!-- Source: {filename} -->\n{inner_content.strip()}')
             bundled_count += 1
         else:
-            logger.error(f"CRITICAL: {filename} has no parseable <group> block; refusing to bundle.")
+            logger.error(f"CRITICAL: {filename} has no parseable <group name=\"...\"> block; refusing to bundle.")
 
     # A bundle that dropped (or found zero) rules would, once deployed and the manager
     # restarted, silently wipe the live ruleset. Halt before doing any damage.
@@ -177,9 +187,10 @@ def deploy_rules(token: str, settings: Settings, tls_verify: Union[bool, str], d
         )
         sys.exit(1)
 
-    # Wrap all rules in a single <group> block - required by Wazuh API
-    inner = '\n'.join(rule_inner_blocks)
-    bundled_xml = f'<group name="custom_sigma">\n{inner}\n</group>'
+    bundled_xml = '\n'.join(
+        f'<group name="{name}">\n' + '\n'.join(blocks) + '\n</group>'
+        for name, blocks in sorted(groups.items())
+    )
     if dry_run:
         logger.info(f"[DRY RUN] Would deploy {len(xml_files)} rules bundled as {BUNDLE_FILENAME}")
         return True
