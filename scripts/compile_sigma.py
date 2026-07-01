@@ -122,6 +122,8 @@ def _merge_field_literals(existing: List[Dict[str, Any]], incoming: List[Dict[st
             same["pattern"] = f"(?=.*{same['pattern']})(?=.*{lit['pattern']})"
     return result
 
+MAX_AND_CLAUSE_PRODUCT = 500
+
 def _and_clauses(clause_lists: List[List[Dict[str, List[Dict[str, Any]]]]]) -> List[Dict[str, List[Dict[str, Any]]]]:
     """AND together several DNF operands by distributing into a flat DNF.
 
@@ -129,6 +131,17 @@ def _and_clauses(clause_lists: List[List[Dict[str, List[Dict[str, Any]]]]]) -> L
     cartesian product of their clauses; same-field literals are merged per clause.
     """
     import itertools
+    import math
+
+    product_size = math.prod(len(clauses) for clauses in clause_lists) if clause_lists else 1
+    if product_size > MAX_AND_CLAUSE_PRODUCT:
+        raise ValueError(
+            f"AND clause cartesian product too large ({product_size} > "
+            f"{MAX_AND_CLAUSE_PRODUCT}): this Sigma rule's nested OR/AND structure "
+            f"would explode into too many DNF clauses to compile safely. Simplify the "
+            f"rule's condition logic."
+        )
+
     result: List[Dict[str, List[Dict[str, Any]]]] = []
     for combo in itertools.product(*clause_lists):
         merged: Dict[str, List[Dict[str, Any]]] = {}
