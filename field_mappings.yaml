@@ -18,6 +18,11 @@ ParentImage: win.eventdata.parentImage
 ParentCommandLine: win.eventdata.parentCommandLine
 ProcessId: win.eventdata.processId
 ParentProcessId: win.eventdata.parentProcessId
+Description: win.eventdata.description
+Product: win.eventdata.product
+Company: win.eventdata.company
+FileVersion: win.eventdata.fileVersion
+ParentUser: win.eventdata.parentUser
 
 # --- Other Sysmon fields (registry / network) ---
 TargetObject: win.eventdata.targetObject
