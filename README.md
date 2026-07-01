@@ -109,6 +109,7 @@ flowchart LR
 │   ├── COMPILER.md                 # guided trace through the compiler internals
 │   └── COVERAGE.md                 # generated: per-rule compile status vs. SigmaHQ
 ├── templates/wazuh_rule.xml.j2     # Jinja2 template for Wazuh XML output
+├── hooks/pre-push                  # tests + compile + validate; `make install-hooks` to enable
 ├── field_mappings.yaml             # Sigma field name → Wazuh decoder field name
 ├── id_registry.json                # sigma_uuid → wazuh_id (must be committed)
 ├── pipeline.yaml                   # Central path/deploy/SigmaHQ-import config
@@ -146,6 +147,7 @@ git clone https://github.com/RasheedFarhat/DaC-Pipeline.git && cd DaC-Pipeline
 python3 -m venv venv && source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 pre-commit install                                  # local hooks: validators + mypy
+make install-hooks                                  # pre-push: tests + compile + validate
 ```
 
 ### Validate and build locally

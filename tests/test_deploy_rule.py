@@ -7,10 +7,50 @@ from unittest.mock import patch
 
 # Add the scripts directory to the path so we can import our deployment script
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../scripts')))
-from deploy_rule import safe_api_request, deploy_rules, reconcile_state, Settings, authed_request
+from deploy_rule import safe_api_request, deploy_rules, reconcile_state, Settings, authed_request, get_token
 
 # --- Constants for Testing ---
 TEST_URL = 'https://localhost:55000/test_endpoint'
+
+
+# --- Dry-run must work with zero configured credentials ---------------------------
+# It never authenticates for real, so it shouldn't need real (or even placeholder)
+# secrets. Previously Settings(wazuh_user=..., wazuh_password=...) had no defaults,
+# so building Settings() at all raised a Pydantic ValidationError before dry-run
+# ever got a chance to run -- confirmed against a clean env (env -i, no .env file).
+
+def _settings_no_credentials() -> Settings:
+    # _env_file=None disables pydantic-settings' .env lookup for this instance --
+    # without it, a real local .env (gitignored, present on dev machines) would
+    # leak real credentials into this "nothing configured" test and make it flaky.
+    return Settings(_env_file=None)  # type: ignore[call-arg]
+
+
+def test_settings_builds_with_no_credentials_configured():
+    """Settings() must not raise just because no credentials are configured --
+    that's the normal, expected state for dry-run."""
+    settings = _settings_no_credentials()
+    assert settings.wazuh_user is None
+    assert settings.wazuh_password is None
+
+
+@responses.activate
+def test_get_token_dry_run_without_credentials_never_touches_network():
+    """No WAZUH_USER/WAZUH_PASSWORD + dry-run must short-circuit straight to the
+    offline sentinel token, without attempting any HTTP call at all."""
+    settings = _settings_no_credentials()
+    token = get_token(settings, tls_verify=True, dry_run=True)
+    assert token == "OFFLINE_DRY_RUN_TOKEN"
+    assert len(responses.calls) == 0
+
+
+def test_get_token_real_deploy_without_credentials_exits_with_clear_error():
+    """A real (non-dry-run) deploy still can't proceed without credentials -- but
+    it must fail with a clear, explicit error instead of a bare Pydantic
+    ValidationError surfacing from deep inside Settings() construction."""
+    settings = _settings_no_credentials()
+    with pytest.raises(SystemExit):
+        get_token(settings, tls_verify=True, dry_run=False)
 
 @responses.activate
 def test_safe_api_request_success():

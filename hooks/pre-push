@@ -1,0 +1,32 @@
+#!/bin/bash
+# Tracked pre-push hook -- install it with `make install-hooks`.
+#
+# Runs the same checks CI runs (tests, compile, validate rule IDs) before a push
+# leaves this machine, so a broken push is caught locally instead of surfacing
+# only after CI runs on GitHub. Uses `git rev-parse --show-toplevel` rather than a
+# hardcoded path so it works regardless of where the repo is cloned.
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+VENV_PYTHON="$REPO_ROOT/venv/bin/python3"
+
+if [ ! -x "$VENV_PYTHON" ]; then
+    echo "==> venv not found at $VENV_PYTHON -- skipping pre-push checks."
+    echo "==> Run 'python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt' to enable them."
+    exit 0
+fi
+
+echo "==> Running pre-push checks..."
+
+echo "==> pytest..."
+"$VENV_PYTHON" -m pytest tests/ -q --tb=short
+
+echo "==> compile_sigma.py..."
+"$VENV_PYTHON" scripts/compile_sigma.py
+
+echo "==> check_rule_ids.py..."
+"$VENV_PYTHON" scripts/check_rule_ids.py
+
+echo "==> All checks passed. Pushing."

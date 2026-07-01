@@ -22,8 +22,13 @@ BUNDLE_FILENAME = "sigma_custom_rules.xml"
 # --- Strict Configuration Schema ---
 class Settings(BaseSettings):
     wazuh_api_url: str = Field(default="https://localhost:55000")
-    wazuh_user: str = Field(...)
-    wazuh_password: str = Field(...)
+    # Optional, not required: dry-run never authenticates for real (see get_token),
+    # so it must be able to build a Settings object with zero configured credentials.
+    # A real (non-dry-run) deploy still can't proceed without them -- enforced
+    # explicitly in get_token(), which gives a clearer error than a bare Pydantic
+    # ValidationError would.
+    wazuh_user: Optional[str] = Field(default=None)
+    wazuh_password: Optional[str] = Field(default=None)
     wazuh_ca_bundle: Optional[str] = Field(default=None)
     wazuh_verify_tls: bool = Field(default=True)
 
@@ -124,6 +129,16 @@ def assert_wazuh_result_ok(response: requests.Response, action: str) -> None:
 
 # THE FIX: Added dry_run parameter and offline token fallback
 def get_token(settings: Settings, tls_verify: Union[bool, str], dry_run: bool = False) -> str:
+    if not settings.wazuh_user or not settings.wazuh_password:
+        if dry_run:
+            logger.warning(
+                "WAZUH_USER/WAZUH_PASSWORD not set. Dry-run never authenticates for "
+                "real, so this is fine -- simulating without ever touching the network."
+            )
+            return "OFFLINE_DRY_RUN_TOKEN"
+        logger.error("CRITICAL: WAZUH_USER and WAZUH_PASSWORD must be set for a real (non-dry-run) deploy.")
+        sys.exit(1)
+
     logger.info("Authenticating to the Wazuh API...")
     url: str = f"{settings.wazuh_api_url}/security/user/authenticate"
     try:
