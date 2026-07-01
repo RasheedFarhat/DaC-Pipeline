@@ -99,6 +99,35 @@ def test_deploy_rules_bundles_complete_set(tmp_path):
 
 
 @responses.activate
+def test_deploy_rules_bundle_preserves_distinct_group_names(tmp_path):
+    """Bundling used to collapse every rule into one generic "custom_sigma" group,
+    silently discarding each rule's original product/service membership (e.g.
+    "windows, custom_sigma" vs "linux, custom_sigma") -- confirmed live that this
+    broke group:windows / group:linux filtering post-deploy. The bundle must emit
+    one <group name=...> block per distinct name, not collapse them."""
+    build = tmp_path / "build"
+    build.mkdir()
+    (build / "r1.xml").write_text('<group name="windows, custom_sigma">\n  <rule id="200001" level="10"/>\n</group>')
+    (build / "r2.xml").write_text('<group name="linux, custom_sigma">\n  <rule id="200002" level="10"/>\n</group>')
+    (build / "r3.xml").write_text('<group name="windows, custom_sigma">\n  <rule id="200003" level="10"/>\n</group>')
+
+    bundle_url = "https://localhost:55000/rules/files/sigma_custom_rules.xml"
+    responses.add(responses.PUT, bundle_url, json={"error": 0}, status=200)
+
+    assert deploy_rules("TOKEN", _settings(str(build)), False, dry_run=False) is True
+
+    sent_xml = responses.calls[0].request.body
+    assert isinstance(sent_xml, str)
+    assert sent_xml.count('<group name="windows, custom_sigma">') == 1
+    assert sent_xml.count('<group name="linux, custom_sigma">') == 1
+    assert 'id="200001"' in sent_xml and 'id="200002"' in sent_xml and 'id="200003"' in sent_xml
+    # Both rules 200001 and 200003 share the windows group -- must land in the SAME
+    # block, not two separate "windows, custom_sigma" blocks.
+    windows_block = sent_xml.split('<group name="windows, custom_sigma">')[1].split('</group>')[0]
+    assert 'id="200001"' in windows_block and 'id="200003"' in windows_block
+
+
+@responses.activate
 def test_deploy_rules_put_includes_overwrite_true(tmp_path):
     """Without overwrite=true, the Wazuh API 200s but silently skips the write when the
     bundle file already exists (confirmed against a live manager: HTTP 200, body
