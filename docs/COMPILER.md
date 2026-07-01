@@ -3,7 +3,16 @@
 A guided trace through [`scripts/compile_sigma.py`](../scripts/compile_sigma.py).
 This is not an API reference — it follows **one real shipped rule** through every
 stage of the transform and shows the actual intermediate form at each step. Line
-references point at the code as it stands today.
+references point at the code as it stands today (re-verified against the current
+file line-by-line, not carried over from an earlier revision).
+
+Current state, for context: this compiler builds **58 Sigma rules** (3
+hand-authored + 55 curated imports from [SigmaHQ](https://github.com/SigmaHQ/sigma))
+into **216 Wazuh rules**, spanning **119 distinct MITRE ATT&CK techniques across
+all 14 tactics** — see [`docs/COVERAGE.md`](COVERAGE.md) and
+[`scripts/sigmahq_coverage.py`](../scripts/sigmahq_coverage.py), the companion tool
+that measures how much of an upstream Sigma ruleset this compiler already handles
+before any of it is imported.
 
 ## The problem
 
@@ -35,6 +44,9 @@ The walker handles the part of Sigma that string-matches process/file telemetry:
 - **Case-insensitive matching** to mirror Sigma semantics.
 - **Field-name mapping** (Sigma → Wazuh decoder field) via `field_mappings.yaml`.
 - **MITRE technique-tag** extraction into `<mitre><id>`.
+- **Cartesian-product safety cap** — nested OR/AND structures distribute into DNF
+  up to `MAX_AND_CLAUSE_PRODUCT` (500) combinations; larger ones fail the build
+  rather than hang or exhaust memory — see [Decision 4](#4-cartesian-product-cap-on-and-distribution).
 
 Everything outside that — numeric comparisons, regex/CIDR/base64 modifiers,
 keyword (field-less) matching — is either rejected at build time or unsound; the
@@ -55,7 +67,7 @@ flowchart TD
 ```
 
 The core data structure (the thing flowing along the middle of that diagram) is the
-return type of `evaluate_ast` (`scripts/compile_sigma.py:144`):
+return type of `evaluate_ast` (`scripts/compile_sigma.py:201`):
 
 > a **list of OR-alternatives**, where each alternative maps a Wazuh field name to a
 > **list of `{"pattern": str, "negate": bool}` literals**.
@@ -85,8 +97,8 @@ command line contains **both** `urlcache` **and** `split` — the classic
 
 ### 1. Parse → AST
 
-`SigmaCollection.from_yaml()` (`compile_sigma.py:260`) parses and validates the
-rule; `rule.detection.parsed_condition[0].parsed` (`:270`) is the root AST node.
+`SigmaCollection.from_yaml()` (`compile_sigma.py:350`) parses and validates the
+rule; `rule.detection.parsed_condition[0].parsed` (`:361`) is the root AST node.
 For this rule the tree is:
 
 ```
@@ -104,19 +116,19 @@ of two `*…*` `CommandLine` leaves.
 ### 2. Walk the leaves → patterns
 
 `evaluate_ast` recurses to the bottom and hits the leaf branch
-(`compile_sigma.py:182`). Each `ConditionFieldEqualsValueExpression` becomes one
+(`compile_sigma.py:239`). Each `ConditionFieldEqualsValueExpression` becomes one
 regex literal:
 
-- **Field mapping** (`:190-191`): `Image` → `win.eventdata.image`,
+- **Field mapping** (`:256`): `Image` → `win.eventdata.image`,
   `CommandLine` → `win.eventdata.commandLine`, via `field_mappings.yaml`. An unmapped
   field passes through unchanged.
-- **Wildcard → regex** (`:196-204`): each `*` becomes `.*`, each `?` becomes `.`,
+- **Wildcard → regex** (`:286-294`): each `*` becomes `.*`, each `?` becomes `.`,
   and every literal character is `re.escape`-d (so `.` in `certutil.exe` becomes
   `\.`).
-- **Anchoring** (`:206-209`): if the value did *not* start with `*`, prepend `^`; if
+- **Anchoring** (`:296-299`): if the value did *not* start with `*`, prepend `^`; if
   it did not end with `*`, append `$`. `endswith` (`*\certutil.exe`) starts wild but
   ends anchored → trailing `$`, no leading `^`.
-- **Case-insensitivity** (`:211-214`): prepend `(?i)` — see [Decision 1](#1-i-case-insensitivity).
+- **Case-insensitivity** (`:301-304`): prepend `(?i)` — see [Decision 1](#1-i-case-insensitivity).
 
 The three leaves produce:
 
@@ -128,10 +140,12 @@ The three leaves produce:
 
 ### 3. AND-merge → DNF clause
 
-Walking back up, `ConditionAND` (`:158-160`) calls `_and_clauses`
-(`:125-142`), which takes the cartesian product of its operands' alternatives
-(`itertools.product`, `:133`) and merges same-field literals per clause via
-`_merge_field_literals` (`:104`).
+Walking back up, `ConditionAND` (`:215-217`) calls `_and_clauses`
+(`:127-155`), which takes the cartesian product of its operands' alternatives
+(`itertools.product`, `:146`) and merges same-field literals per clause via
+`_merge_field_literals` (`:104`). Before distributing, `_and_clauses` checks the
+product size against `MAX_AND_CLAUSE_PRODUCT` (`:125`, `:136-143`) and fails loud
+if it would exceed 500 — see [Decision 4](#4-cartesian-product-cap-on-and-distribution).
 
 Here every operand has exactly one alternative, so the product is a single clause.
 The two `CommandLine` leaves collide on one field with the **same (positive)
@@ -165,11 +179,11 @@ repr):
 
 ### 4. Render → XML
 
-`main` assigns a stable ID (`:287-293`, [Decision 3](#3-stable-ids-via-id_registryjson))
+`main` assigns a stable ID (`:373-384`, [Decision 3](#3-stable-ids-via-id_registryjson))
 and renders through `templates/wazuh_rule.xml.j2`. The template's nested loop
 (`wazuh_rule.xml.j2:5-9`) emits one `<field>` per literal, adding `negate="yes"`
 only when the literal is negative (`:7`). The output is then parsed with
-`ET.fromstring` (`compile_sigma.py:307`) as a well-formedness gate before it's
+`ET.fromstring` (`compile_sigma.py:399`) as a well-formedness gate before it's
 written to `build/wazuh/sysmon_certutil_download_200001.xml`:
 
 ```xml
@@ -194,9 +208,12 @@ to Sysmon Event ID 1, and the `<!-- sigma_uuid -->` comment is what
 
 ## Negation and DNF fan-out (traced on illustrative inputs)
 
-None of the three shipped rules use `or` or `not`, so the following are minimal
-inputs run through the **same compiler** to show those branches producing real
-output.
+None of the three hand-authored example rules use `or` or `not` directly, so the
+following are minimal, illustrative inputs run through the **same compiler** to make
+the DNF/De Morgan mechanics easy to follow in isolation. Real shipped rules exercise
+both paths too — the imported `proc_creation_win_hktl_mimikatz_command_line.yml`'s
+`1 of selection_*` condition is an OR across 23 alternatives, fanning out to 23
+Wazuh rules the same way as the worked example below.
 
 ### DNF distribution — `selection and (a or b)`
 
@@ -206,7 +223,7 @@ payload:    { CommandLine|contains: ['.xsl', 'http://'] }
 condition: selection and payload
 ```
 
-The `or` inside `payload` makes `ConditionOR` (`:152-156`) return **two**
+The `or` inside `payload` makes `ConditionOR` (`:209-213`) return **two**
 alternatives; `ConditionAND` distributes `selection` across both
 (`itertools.product`). Result — **two clauses, i.e. two emitted rules**:
 
@@ -221,7 +238,7 @@ alternatives; `ConditionAND` distributes `selection` across both
 
 This is exactly why the shipped `sysmon_wmic_xsl_bypass.yml` fans out to 12 Wazuh
 rules: its nested `or`s multiply out into disjunctive normal form, one rule per
-alternative, each getting its own stable ID (`UUID`, `UUID_1`, … at `:284`).
+alternative, each getting its own stable ID (`UUID`, `UUID_1`, … at `:375`).
 
 ### De Morgan — `selection and not (a or b)`
 
@@ -231,7 +248,7 @@ filter:    { CommandLine|contains: ['Get-Help', 'Get-Command'] }
 condition: selection and not filter
 ```
 
-`ConditionNOT` (`:162-180`) receives the child DNF (two clauses, one per `or`
+`ConditionNOT` (`:219-237`) receives the child DNF (two clauses, one per `or`
 branch), flips every literal's polarity, and ANDs the negated clauses back together
 — the De Morgan identity `NOT(a OR b) == NOT(a) AND NOT(b)`. Both negated literals
 land on the same field with the **same (negative) polarity**, so they merge via
@@ -250,11 +267,11 @@ Read it as: image is powershell **and** the command line matches *neither*
 merge with alternation (OR-then-negate). That asymmetry is the whole trick of
 `_merge_field_literals` (`:104-123`).
 
-## Three non-obvious design decisions
+## Four non-obvious design decisions
 
 ### 1. `(?i)` case-insensitivity
 
-`compile_sigma.py:211-214` prepends `(?i)` to every pattern. **Why:** Sigma string
+`compile_sigma.py:301-304` prepends `(?i)` to every pattern. **Why:** Sigma string
 matching is case-insensitive by default, but Wazuh's `pcre2` field type is
 case-sensitive. Without the prefix, `CertUtil.exe` or `URLCACHE` would sail past a
 rule written for `certutil`/`urlcache` — a trivial case-variant evasion that would
@@ -292,10 +309,10 @@ alternation); only *mixed* polarity splits.
 ### 3. Stable IDs via `id_registry.json`
 
 Wazuh rule IDs are assigned from a persisted map, not generated fresh each run
-(`load_registry` `:218`, assignment `:287-293`, `save_registry` `:225`). On compile,
+(`load_registry` `:308`, assignment `:373-384`, `save_registry` `:315`). On compile,
 each rule's registry key — `UUID` for the first alternative, `UUID_1`, `UUID_2`, …
-for DNF splits (`:284`) — is looked up; an existing key reuses its ID, a new key
-gets `next_id` (max existing + 1, floor 200000, `:242-244`) and the registry is
+for DNF splits (`:375`) — is looked up; an existing key reuses its ID, a new key
+gets `next_id` (max existing + 1, floor 200000, `:333-334`) and the registry is
 rewritten. **Why:** without this, IDs would be positional and would churn every time
 a rule was added, reordered, or split differently — each CI run would produce a
 different ID for the same detection, breaking analyst muscle memory, dashboards,
@@ -303,18 +320,32 @@ alert correlation, and the reconcile step in `deploy_rule.py`. Persisting the ma
 makes the Sigma-UUID → Wazuh-ID binding **stable across runs**, which is why
 `id_registry.json` must be committed alongside any new rule.
 
+### 4. Cartesian-product cap on AND-distribution
+
+`_and_clauses` (`compile_sigma.py:127-155`) distributes ANDed operands via
+`itertools.product`, which is combinatorial: a handful of OR-heavy selections ANDed
+together can multiply into millions of clauses. `MAX_AND_CLAUSE_PRODUCT = 500`
+(`:125`) bounds this — the product size is computed and checked (`:136-143`)
+*before* `itertools.product` runs (`:146`), raising a clear `ValueError` instead of
+hanging or exhausting memory. **Why:** not theoretical — confirmed against the real
+SigmaHQ corpus. 14 rules in the pinned `r2026-04-01` Windows `process_creation`
+scope exceeded the cap, the worst by **33,554,432×**
+(`proc_creation_win_browsers_chromium_headless_file_download.yml`). Rules that hit
+it show up in [`docs/COVERAGE.md`](COVERAGE.md)'s `value_error:other` bucket.
+
 ## What it doesn't support yet
 
 Honest scope. Verified against the current code:
 
 | Sigma feature | Behavior today |
 |---|---|
-| **Numeric comparisons** (`\|lt \|lte \|gt \|gte`) | **Rejected at build (fails loud).** Reaches the leaf as a non-string value type (`SigmaCompareExpression`); the leaf raises a clear `NotImplementedError` — *"Unsupported Sigma value type"* (`:255`) — which `main` turns into a non-zero exit (`:407-408`). |
+| **Numeric comparisons** (`\|lt \|lte \|gt \|gte`) | **Rejected at build (fails loud).** Reaches the leaf as a non-string value type (`SigmaCompareExpression`); the leaf raises a clear `NotImplementedError` — *"Unsupported Sigma value type"* (`:269`) — which `main` turns into a non-zero exit (`:420-422`). |
 | **Regex modifier** (`\|re`) | **Rejected at build (fails loud)** — same leaf type-check (`SigmaRegularExpression`). |
 | **CIDR modifier** (`\|cidr`) | **Rejected at build (fails loud)** — same leaf type-check (`SigmaCIDRExpression`). |
-| **base64 / base64offset** (`\|base64`, `\|base64offset`) | **Rejected at build (fails loud).** `\|base64` is invisible at the leaf (pySigma leaves an ordinary `SigmaString`), so a pre-walk guard, `assert_supported_constructs` (`:164`), inspects each detection item's modifiers and raises `NotImplementedError` naming the modifier (`:179`). This closes the former silent false negative — an exact-match on the *encoded literal* (`(?i)^d2hvYW1p$` for `whoami`). |
-| **Keyword / field-less matching** (a bare list with no field) | **Rejected at build (fails loud).** The non-field leaf now raises `NotImplementedError` (`:234`) instead of returning `[{}]`, closing the former match-everything rule (a `<rule>` with no `<field>`s). |
-| **Empty / null field value** | **Rejected at build (fails loud).** An empty value (former silent `(?i)^$`) and a `SigmaNull` each raise a clear `ValueError` (`:264`, `:247`). |
+| **base64 / base64offset** (`\|base64`, `\|base64offset`) | **Rejected at build (fails loud).** `\|base64` is invisible at the leaf (pySigma leaves an ordinary `SigmaString`), so a pre-walk guard, `assert_supported_constructs` (`:177`), inspects each detection item's modifiers and raises `NotImplementedError` naming the modifier (`:192`). This closes the former silent false negative — an exact-match on the *encoded literal* (`(?i)^d2hvYW1p$` for `whoami`). |
+| **Keyword / field-less matching** (a bare list with no field) | **Rejected at build (fails loud).** The non-field leaf now raises `NotImplementedError` (`:246-252`) instead of returning `[{}]`, closing the former match-everything rule (a `<rule>` with no `<field>`s). |
+| **Empty / null field value** | **Rejected at build (fails loud).** An empty value (former silent `(?i)^$`) and a `SigmaNull` each raise a clear `ValueError` (`:277`, `:260`). |
+| **Extremely large OR/AND fan-out** (>500 DNF clauses) | **Rejected at build (fails loud).** See [Decision 4](#4-cartesian-product-cap-on-and-distribution). |
 | **`1 of` / `all of` aggregators** | **Supported** — pySigma expands `1 of selection*` into a `ConditionOR` and `all of …` into a `ConditionAND` *before* the walker runs, so they need no special handling. (Listed here because they're commonly assumed unsupported; they aren't.) |
 
 Every unsupported construct above now **fails the build with a clear message**
@@ -324,15 +355,20 @@ that used to be silent — **base64** (an exact-match on the encoded literal) an
 the `(?i)` case-variant evasion: a detection that looks deployed but is mis-targeted
 or porous. They are now rejected at compile time and covered by regression tests in
 `tests/test_compile_sigma.py`. Adding real support for one of these means teaching
-the leaf handler (`compile_sigma.py:226` onward) — or `assert_supported_constructs`
+the leaf handler (`compile_sigma.py:239` onward) — or `assert_supported_constructs`
 for modifier-only cases — to translate the corresponding pySigma expression type,
 then removing its guard.
 
 ## Where to look next
 
-- The walker and merge logic: `scripts/compile_sigma.py` (`evaluate_ast` `:144`,
-  `_merge_field_literals` `:104`, `_and_clauses` `:125`).
+- The walker and merge logic: `scripts/compile_sigma.py` (`evaluate_ast` `:201`,
+  `_merge_field_literals` `:104`, `_and_clauses` `:127`, cartesian-product cap
+  `:125` / `:136-143`).
 - The output shape: `templates/wazuh_rule.xml.j2`.
 - The field map: `field_mappings.yaml`.
 - The downstream ID/linkage gate: `scripts/check_rule_ids.py`.
-- Test coverage for all of the above: `tests/test_compile_sigma.py`.
+- The SigmaHQ coverage/import tool that measures how much of an upstream ruleset
+  this compiler already handles before any of it is imported:
+  `scripts/sigmahq_coverage.py` (see [`docs/COVERAGE.md`](COVERAGE.md)).
+- Test coverage for all of the above: `tests/test_compile_sigma.py`,
+  `tests/test_sigmahq_coverage.py`.
