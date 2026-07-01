@@ -8,3 +8,11 @@ deploy:
   api_url: "https://localhost:55000"
   target_group: "default"
   agent_conf_path: "configs/agent.conf"
+
+sigmahq:
+  repo_url: "https://github.com/SigmaHQ/sigma.git"
+  pinned_ref: "r2026-04-01"
+  scope_paths:
+    - "rules/windows/process_creation"
+  cache_dir: "build/sigmahq_cache"
+  import_dir: "rules/sigma/sigmahq"
