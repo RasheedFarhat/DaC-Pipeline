@@ -103,6 +103,25 @@ def authed_request(
         headers["Authorization"] = f"Bearer {token}"
         return safe_api_request(method, url, headers=headers, verify=tls_verify, **kwargs), token
 
+def assert_wazuh_result_ok(response: requests.Response, action: str) -> None:
+    """Raise if the Wazuh API reported failure in the JSON body, even on HTTP 200.
+
+    Wazuh's /rules/files/* endpoints (and others) can return HTTP 200 while the
+    write/delete itself was skipped -- the only signal is the body's "error" /
+    "total_failed_items" fields. Confirmed against a live manager: a PUT without
+    overwrite=true, and a DELETE of a file that doesn't exist, both return 200 with
+    "error": 1. raise_for_status() never sees this, so every /rules/files/* caller
+    must check the body explicitly instead of trusting a 200 status.
+    """
+    try:
+        body = response.json()
+    except ValueError:
+        return
+    if body.get("error", 0) or body.get("total_failed_items", 0):
+        raise requests.exceptions.RequestException(
+            f"Wazuh API reported failure while {action}: {body.get('message', body)}"
+        )
+
 # THE FIX: Added dry_run parameter and offline token fallback
 def get_token(settings: Settings, tls_verify: Union[bool, str], dry_run: bool = False) -> str:
     logger.info("Authenticating to the Wazuh API...")
@@ -175,7 +194,11 @@ def deploy_rules(token: str, settings: Settings, tls_verify: Union[bool, str], d
     # and mtime are untouched by an overwrite-less PUT to an existing filename).
     url = f"{settings.wazuh_api_url}/rules/files/{BUNDLE_FILENAME}?overwrite=true"
     try:
-        authed_request('PUT', url, settings, tls_verify, token, headers=headers, data=bundled_xml)
+        response, token = authed_request('PUT', url, settings, tls_verify, token, headers=headers, data=bundled_xml)
+        # overwrite=true fixes the specific "file already exists" no-op above, but the
+        # Wazuh API can 200 with a body-level failure for other reasons too (e.g. a
+        # malformed bundle it rejects) -- check the body, don't trust the HTTP status alone.
+        assert_wazuh_result_ok(response, f"deploying {BUNDLE_FILENAME}")
         logger.info(f"Successfully deployed {len(xml_files)} rules as {BUNDLE_FILENAME}")
     except requests.exceptions.RequestException as e:
         logger.error(f"ERROR: Network or API failure deploying bundle: {e}")
@@ -242,7 +265,12 @@ def reconcile_state(token: str, settings: Settings, tls_verify: Union[bool, str]
             if dry_run:
                 logger.info(f"[DRY RUN] Would DELETE orphaned rule: {filename}")
             else:
-                _resp, token = authed_request('DELETE', f"{settings.wazuh_api_url}/rules/files/{filename}", settings, tls_verify, token)
+                resp, token = authed_request('DELETE', f"{settings.wazuh_api_url}/rules/files/{filename}", settings, tls_verify, token)
+                # Same blind spot as the PUT bundle: DELETE of a file that's already
+                # gone, or that fails server-side, still returns HTTP 200 (confirmed
+                # against a live manager). Without this check we'd log "Deleted" for a
+                # delete that never happened, leaving a stale rule live indefinitely.
+                assert_wazuh_result_ok(resp, f"deleting orphaned rule {filename}")
                 logger.info(f"Deleted orphaned rule: {filename}")
     except requests.exceptions.RequestException as e:
         logger.error(f"Error during state reconciliation (Network/API): {e}")
