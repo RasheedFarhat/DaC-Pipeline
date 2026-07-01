@@ -167,7 +167,13 @@ def deploy_rules(token: str, settings: Settings, tls_verify: Union[bool, str], d
 
     headers: Dict[str, str] = {'Content-Type': 'application/octet-stream'}
 
-    url = f"{settings.wazuh_api_url}/rules/files/{BUNDLE_FILENAME}"
+    # overwrite=true is required once BUNDLE_FILENAME already exists on the manager.
+    # Without it, the Wazuh API returns HTTP 200 with an "error" field set in the body
+    # and leaves the existing file untouched — raise_for_status() sees only the 200
+    # and never notices the write was skipped, so every re-deploy after the first
+    # silently no-ops (confirmed against a live manager: the file's on-disk content
+    # and mtime are untouched by an overwrite-less PUT to an existing filename).
+    url = f"{settings.wazuh_api_url}/rules/files/{BUNDLE_FILENAME}?overwrite=true"
     try:
         authed_request('PUT', url, settings, tls_verify, token, headers=headers, data=bundled_xml)
         logger.info(f"Successfully deployed {len(xml_files)} rules as {BUNDLE_FILENAME}")
