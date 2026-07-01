@@ -1,0 +1,1225 @@
+# SigmaHQ Coverage Report
+
+Generated 2026-07-01 against [SigmaHQ](https://github.com/SigmaHQ/sigma) `r2026-04-01` (`0e3b749e0d85cd943706ed610a1447f0d54e8388`), scope: Windows `process_creation` / Sysmon rules.
+
+## Coverage: 86.2% (1014 / 1177 rules compiled clean)
+
+- Clean: 1014
+- Compiles, unmapped field(s): 0
+- Failed: 163
+
+## Failure buckets, ranked by frequency
+
+The top row is the next compiler feature worth building.
+
+| Bucket | Count |
+|---|---|
+| `unsupported_value_type:SigmaExpansion` | 77 |
+| `unsupported_value_type:SigmaRegularExpression` | 39 |
+| `null_value` | 24 |
+| `value_error:other` | 14 |
+| `empty_value` | 5 |
+| `unsupported_modifier:base64offset` | 4 |
+
+## Top unmapped fields by count
+
+Cheapest coverage win in this report: each row is a one-line addition to `field_mappings.yaml`.
+
+| Field | Rules affected |
+|---|---|
+| _(none)_ | |
+
+## Rule listing
+
+### Clean (1014)
+- `rules/windows/process_creation/proc_creation_win_7zip_exfil_dmp_files.yml` — 7Zip Compressing Dump Files
+- `rules/windows/process_creation/proc_creation_win_7zip_password_compression.yml` — Compress Data and Lock With Password for Exfiltration With 7-ZIP
+- `rules/windows/process_creation/proc_creation_win_acccheckconsole_execution.yml` — Potential DLL Injection Via AccCheckConsole
+- `rules/windows/process_creation/proc_creation_win_addinutil_suspicious_cmdline.yml` — Suspicious AddinUtil.EXE CommandLine Execution
+- `rules/windows/process_creation/proc_creation_win_addinutil_uncommon_child_process.yml` — Uncommon Child Process Of AddinUtil.EXE
+- `rules/windows/process_creation/proc_creation_win_addinutil_uncommon_cmdline.yml` — Uncommon AddinUtil.EXE CommandLine Execution
+- `rules/windows/process_creation/proc_creation_win_addinutil_uncommon_dir_exec.yml` — AddinUtil.EXE Execution From Uncommon Directory
+- `rules/windows/process_creation/proc_creation_win_adplus_memory_dump.yml` — Potential Adplus.EXE Abuse
+- `rules/windows/process_creation/proc_creation_win_agentexecutor_potential_abuse.yml` — AgentExecutor PowerShell Execution
+- `rules/windows/process_creation/proc_creation_win_agentexecutor_susp_usage.yml` — Suspicious AgentExecutor PowerShell Execution
+- `rules/windows/process_creation/proc_creation_win_amsi_registry_tampering.yml` — Windows AMSI Related Registry Tampering Via CommandLine
+- `rules/windows/process_creation/proc_creation_win_appvlp_uncommon_child_process.yml` — Uncommon Child Process Of Appvlp.EXE
+- `rules/windows/process_creation/proc_creation_win_arcsoc_susp_child_process.yml` — Suspicious ArcSOC.exe Child Process
+- `rules/windows/process_creation/proc_creation_win_aspnet_compiler_exectuion.yml` — AspNetCompiler Execution
+- `rules/windows/process_creation/proc_creation_win_aspnet_compiler_susp_child_process.yml` — Suspicious Child Process of AspNetCompiler
+- `rules/windows/process_creation/proc_creation_win_aspnet_compiler_susp_paths.yml` — Potentially Suspicious ASP.NET Compilation Via AspNetCompiler
+- `rules/windows/process_creation/proc_creation_win_at_interactive_execution.yml` — Interactive AT Job
+- `rules/windows/process_creation/proc_creation_win_atbroker_uncommon_ats_execution.yml` — Uncommon  Assistive Technology Applications Execution Via AtBroker.EXE
+- `rules/windows/process_creation/proc_creation_win_attrib_hiding_files.yml` — Hiding Files with Attrib.exe
+- `rules/windows/process_creation/proc_creation_win_attrib_system_susp_paths.yml` — Set Suspicious Files as System Files Using Attrib.EXE
+- `rules/windows/process_creation/proc_creation_win_auditpol_nt_resource_kit_usage.yml` — Audit Policy Tampering Via NT Resource Kit Auditpol
+- `rules/windows/process_creation/proc_creation_win_auditpol_susp_execution.yml` — Audit Policy Tampering Via Auditpol
+- `rules/windows/process_creation/proc_creation_win_autologger_session_registry_modification.yml` — Windows EventLog Autologger Session Registry Modification Via CommandLine
+- `rules/windows/process_creation/proc_creation_win_autorun_registry_modified_via_wmic.yml` — Suspicious Autorun Registry Modified via WMI
+- `rules/windows/process_creation/proc_creation_win_baaupdate_susp_child_process.yml` — Suspicious BitLocker Access Agent Update Utility Execution
+- `rules/windows/process_creation/proc_creation_win_bash_command_execution.yml` — Indirect Inline Command Execution Via Bash.EXE
+- `rules/windows/process_creation/proc_creation_win_bcdedit_boot_conf_tamper.yml` — Boot Configuration Tampering Via Bcdedit.EXE
+- `rules/windows/process_creation/proc_creation_win_bcdedit_susp_execution.yml` — Potential Ransomware or Unauthorized MBR Tampering Via Bcdedit.EXE
+- `rules/windows/process_creation/proc_creation_win_bcp_export_data.yml` — Data Export From MSSQL Table Via BCP.EXE
+- `rules/windows/process_creation/proc_creation_win_bginfo_suspicious_child_process.yml` — Suspicious Child Process Of BgInfo.EXE
+- `rules/windows/process_creation/proc_creation_win_bginfo_uncommon_child_process.yml` — Uncommon Child Process Of BgInfo.EXE
+- `rules/windows/process_creation/proc_creation_win_bitlockertogo_execution.yml` — BitLockerTogo.EXE Execution
+- `rules/windows/process_creation/proc_creation_win_bitsadmin_download.yml` — File Download Via Bitsadmin
+- `rules/windows/process_creation/proc_creation_win_bitsadmin_download_direct_ip.yml` — Suspicious Download From Direct IP Via Bitsadmin
+- `rules/windows/process_creation/proc_creation_win_bitsadmin_download_file_sharing_domains.yml` — Suspicious Download From File-Sharing Website Via Bitsadmin
+- `rules/windows/process_creation/proc_creation_win_bitsadmin_download_susp_extensions.yml` — File With Suspicious Extension Downloaded Via Bitsadmin
+- `rules/windows/process_creation/proc_creation_win_bitsadmin_download_susp_targetfolder.yml` — File Download Via Bitsadmin To A Suspicious Target Folder
+- `rules/windows/process_creation/proc_creation_win_bitsadmin_potential_persistence.yml` — Monitoring For Persistence Via BITS
+- `rules/windows/process_creation/proc_creation_win_browsers_chromium_headless_debugging.yml` — Potential Data Stealing Via Chromium Headless Debugging
+- `rules/windows/process_creation/proc_creation_win_browsers_chromium_headless_exec.yml` — Browser Execution In Headless Mode
+- `rules/windows/process_creation/proc_creation_win_browsers_chromium_load_extension.yml` — Chromium Browser Instance Executed With Custom Extension
+- `rules/windows/process_creation/proc_creation_win_browsers_chromium_mockbin_abuse.yml` — Chromium Browser Headless Execution To Mockbin Like Site
+- `rules/windows/process_creation/proc_creation_win_browsers_chromium_susp_load_extension.yml` — Suspicious Chromium Browser Instance Executed With Custom Extension
+- `rules/windows/process_creation/proc_creation_win_browsers_inline_file_download.yml` — File Download From Browser Process Via Inline URL
+- `rules/windows/process_creation/proc_creation_win_browsers_remote_debugging.yml` — Browser Started with Remote Debugging
+- `rules/windows/process_creation/proc_creation_win_browsers_tor_execution.yml` — Tor Client/Browser Execution
+- `rules/windows/process_creation/proc_creation_win_calc_uncommon_exec.yml` — Suspicious Calculator Usage
+- `rules/windows/process_creation/proc_creation_win_cdb_arbitrary_command_execution.yml` — Potential Binary Proxy Execution Via Cdb.EXE
+- `rules/windows/process_creation/proc_creation_win_certmgr_certificate_installation.yml` — New Root Certificate Installed Via CertMgr.EXE
+- `rules/windows/process_creation/proc_creation_win_certoc_download.yml` — File Download via CertOC.EXE
+- `rules/windows/process_creation/proc_creation_win_certutil_download.yml` — Suspicious Download Via Certutil.EXE
+- `rules/windows/process_creation/proc_creation_win_certutil_download_direct_ip.yml` — Suspicious File Downloaded From Direct IP Via Certutil.EXE
+- `rules/windows/process_creation/proc_creation_win_certutil_download_file_sharing_domains.yml` — Suspicious File Downloaded From File-Sharing Website Via Certutil.EXE
+- `rules/windows/process_creation/proc_creation_win_certutil_ntlm_coercion.yml` — Potential NTLM Coercion Via Certutil.EXE
+- `rules/windows/process_creation/proc_creation_win_chcp_codepage_switch.yml` — Suspicious CodePage Switch Via CHCP
+- `rules/windows/process_creation/proc_creation_win_cipher_overwrite_deleted_data.yml` — Deleted Data Overwritten Via Cipher.EXE
+- `rules/windows/process_creation/proc_creation_win_clip_execution.yml` — Data Copied To Clipboard Via Clip.EXE
+- `rules/windows/process_creation/proc_creation_win_cloudflared_portable_execution.yml` — Cloudflared Portable Execution
+- `rules/windows/process_creation/proc_creation_win_cloudflared_quicktunnel_execution.yml` — Cloudflared Quick Tunnel Execution
+- `rules/windows/process_creation/proc_creation_win_cloudflared_tunnel_cleanup.yml` — Cloudflared Tunnel Connections Cleanup
+- `rules/windows/process_creation/proc_creation_win_cloudflared_tunnel_run.yml` — Cloudflared Tunnel Execution
+- `rules/windows/process_creation/proc_creation_win_cmd_assoc_execution.yml` — Change Default File Association Via Assoc
+- `rules/windows/process_creation/proc_creation_win_cmd_assoc_tamper_exe_file_association.yml` — Change Default File Association To Executable Via Assoc
+- `rules/windows/process_creation/proc_creation_win_cmd_copy_dmp_from_share.yml` — Copy .DMP/.DUMP Files From Remote Share Via Cmd.EXE
+- `rules/windows/process_creation/proc_creation_win_cmd_del_greedy_deletion.yml` — Greedy File Deletion Using Del
+- `rules/windows/process_creation/proc_creation_win_cmd_dosfuscation.yml` — Potential Dosfuscation Activity
+- `rules/windows/process_creation/proc_creation_win_cmd_http_appdata.yml` — Command Line Execution with Suspicious URL and AppData Strings
+- `rules/windows/process_creation/proc_creation_win_cmd_mklink_osk_cmd.yml` — Potential Privilege Escalation Using Symlink Between Osk and Cmd
+- `rules/windows/process_creation/proc_creation_win_cmd_mklink_shadow_copies_access_symlink.yml` — VolumeShadowCopy Symlink Creation Via Mklink
+- `rules/windows/process_creation/proc_creation_win_cmd_net_use_and_exec_combo.yml` — Suspicious File Execution From Internet Hosted WebDav Share
+- `rules/windows/process_creation/proc_creation_win_cmd_no_space_execution.yml` — Cmd.EXE Missing Space Characters Execution Anomaly
+- `rules/windows/process_creation/proc_creation_win_cmd_ntdllpipe_redirect.yml` — NtdllPipe Like Activity Execution
+- `rules/windows/process_creation/proc_creation_win_cmd_path_traversal.yml` — Potential CommandLine Path Traversal Via Cmd.EXE
+- `rules/windows/process_creation/proc_creation_win_cmd_redirection_susp_folder.yml` — Potentially Suspicious CMD Shell Output Redirect
+- `rules/windows/process_creation/proc_creation_win_cmd_rmdir_execution.yml` — Directory Removal Via Rmdir
+- `rules/windows/process_creation/proc_creation_win_cmd_shadowcopy_access.yml` — Copy From VolumeShadowCopy Via Cmd.EXE
+- `rules/windows/process_creation/proc_creation_win_cmd_stdin_redirect.yml` — Read Contents From Stdin Via Cmd.EXE
+- `rules/windows/process_creation/proc_creation_win_cmd_sticky_key_like_backdoor_execution.yml` — Sticky Key Like Backdoor Execution
+- `rules/windows/process_creation/proc_creation_win_cmd_sticky_keys_replace.yml` — Persistence Via Sticky Key Backdoor
+- `rules/windows/process_creation/proc_creation_win_cmd_type_arbitrary_file_download.yml` — Potential Download/Upload Activity Using Type Command
+- `rules/windows/process_creation/proc_creation_win_cmd_unusual_parent.yml` — Unusual Parent Process For Cmd.EXE
+- `rules/windows/process_creation/proc_creation_win_cmdl32_arbitrary_file_download.yml` — Potential Arbitrary File Download Via Cmdl32.EXE
+- `rules/windows/process_creation/proc_creation_win_cmstp_execution_by_creation.yml` — CMSTP Execution Process Creation
+- `rules/windows/process_creation/proc_creation_win_comodo_ssh_shellhost_cmd_spawn.yml` — OpenEDR Spawning Command Shell
+- `rules/windows/process_creation/proc_creation_win_configsecuritypolicy_download_file.yml` — Arbitrary File Download Via ConfigSecurityPolicy.EXE
+- `rules/windows/process_creation/proc_creation_win_conhost_headless_powershell.yml` — Powershell Executed From Headless ConHost Process
+- `rules/windows/process_creation/proc_creation_win_conhost_legacy_option.yml` — Suspicious High IntegrityLevel Conhost Legacy Option
+- `rules/windows/process_creation/proc_creation_win_conhost_path_traversal.yml` — Conhost.exe CommandLine Path Traversal
+- `rules/windows/process_creation/proc_creation_win_conhost_susp_winshell_child_process.yml` — Potentially Suspicious Child Processes Spawned by ConHost
+- `rules/windows/process_creation/proc_creation_win_conhost_uncommon_parent.yml` — Conhost Spawned By Uncommon Parent Process
+- `rules/windows/process_creation/proc_creation_win_control_panel_item.yml` — Control Panel Items
+- `rules/windows/process_creation/proc_creation_win_create_new_dmsasvc_account.yml` — New DMSA Service Account Created in Specific OUs
+- `rules/windows/process_creation/proc_creation_win_createdump_lolbin_execution.yml` — CreateDump Process Dump
+- `rules/windows/process_creation/proc_creation_win_credential_guard_registry_tampering.yml` — Windows Credential Guard Registry Tampering Via CommandLine
+- `rules/windows/process_creation/proc_creation_win_csi_execution.yml` — Suspicious Csi.exe Usage
+- `rules/windows/process_creation/proc_creation_win_csi_use_of_csharp_console.yml` — Suspicious Use of CSharp Interactive Console
+- `rules/windows/process_creation/proc_creation_win_csvde_export.yml` — Active Directory Structure Export Via Csvde.EXE
+- `rules/windows/process_creation/proc_creation_win_curl_insecure_proxy_or_doh.yml` — Insecure Proxy/DOH Transfer Via Curl.EXE
+- `rules/windows/process_creation/proc_creation_win_curl_local_file_read.yml` — Local File Read Using Curl.EXE
+- `rules/windows/process_creation/proc_creation_win_curl_susp_download.yml` — Suspicious Curl.EXE Download
+- `rules/windows/process_creation/proc_creation_win_customshellhost_susp_exec.yml` — Suspicious CustomShellHost Execution
+- `rules/windows/process_creation/proc_creation_win_dctask64_arbitrary_command_and_dll_execution.yml` — ManageEngine Endpoint Central Dctask64.EXE Potential Abuse
+- `rules/windows/process_creation/proc_creation_win_defaultpack_uncommon_child_process.yml` — Uncommon Child Process Of Defaultpack.EXE
+- `rules/windows/process_creation/proc_creation_win_defender_default_action_modified.yml` — PowerShell Defender Threat Severity Default Action Set to 'Allow' or 'NoAction'
+- `rules/windows/process_creation/proc_creation_win_defender_remove_context_menu.yml` — Windows Defender Context Menu Removed
+- `rules/windows/process_creation/proc_creation_win_desktopimgdownldr_remote_file_download.yml` — Remote File Download Via Desktopimgdownldr Utility
+- `rules/windows/process_creation/proc_creation_win_desktopimgdownldr_susp_execution.yml` — Suspicious Desktopimgdownldr Command
+- `rules/windows/process_creation/proc_creation_win_devcon_disable_vmci_driver.yml` — Devcon Execution Disabling VMware VMCI Device
+- `rules/windows/process_creation/proc_creation_win_device_credential_deployment.yml` — DeviceCredentialDeployment Execution
+- `rules/windows/process_creation/proc_creation_win_deviceenroller_dll_sideloading.yml` — Potential DLL Sideloading Via DeviceEnroller.EXE
+- `rules/windows/process_creation/proc_creation_win_devinit_lolbin_usage.yml` — Arbitrary MSI Download Via Devinit.EXE
+- `rules/windows/process_creation/proc_creation_win_dfsvc_suspicious_child_processes.yml` — Potentially Suspicious Child Process Of ClickOnce Application
+- `rules/windows/process_creation/proc_creation_win_dirlister_execution.yml` — DirLister Execution
+- `rules/windows/process_creation/proc_creation_win_diskshadow_child_process_susp.yml` — Potentially Suspicious Child Process Of DiskShadow.EXE
+- `rules/windows/process_creation/proc_creation_win_dism_enable_powershell_web_access_feature.yml` — PowerShell Web Access Feature Enabled Via DISM
+- `rules/windows/process_creation/proc_creation_win_dism_remove.yml` — Dism Remove Online Package
+- `rules/windows/process_creation/proc_creation_win_dll_sideload_vmware_xfer.yml` — DLL Sideloading by VMware Xfer Utility
+- `rules/windows/process_creation/proc_creation_win_dns_exfiltration_tools_execution.yml` — DNS Exfiltration and Tunneling Tools Execution
+- `rules/windows/process_creation/proc_creation_win_dns_susp_child_process.yml` — Unusual Child Process of dns.exe
+- `rules/windows/process_creation/proc_creation_win_dnscmd_discovery.yml` — Potential Discovery Activity Via Dnscmd.EXE
+- `rules/windows/process_creation/proc_creation_win_dnscmd_install_new_server_level_plugin_dll.yml` — New DNS ServerLevelPluginDll Installed Via Dnscmd.EXE
+- `rules/windows/process_creation/proc_creation_win_dnx_execute_csharp_code.yml` — Potential Application Whitelisting Bypass via Dnx.EXE
+- `rules/windows/process_creation/proc_creation_win_dotnet_arbitrary_dll_csproj_execution.yml` — Arbitrary DLL or Csproj Code Execution Via Dotnet.EXE
+- `rules/windows/process_creation/proc_creation_win_dotnet_trace_lolbin_execution.yml` — Binary Proxy Execution Via Dotnet-Trace.EXE
+- `rules/windows/process_creation/proc_creation_win_dotnetdump_memory_dump.yml` — Process Memory Dump Via Dotnet-Dump
+- `rules/windows/process_creation/proc_creation_win_driverquery_recon.yml` — Potential Recon Activity Using DriverQuery.EXE
+- `rules/windows/process_creation/proc_creation_win_driverquery_usage.yml` — DriverQuery.EXE Execution
+- `rules/windows/process_creation/proc_creation_win_dsacls_abuse_permissions.yml` — Potentially Over Permissive Permissions Granted Using Dsacls.EXE
+- `rules/windows/process_creation/proc_creation_win_dsacls_password_spray.yml` — Potential Password Spraying Attempt Using Dsacls.EXE
+- `rules/windows/process_creation/proc_creation_win_dsquery_domain_trust_discovery.yml` — Domain Trust Discovery Via Dsquery
+- `rules/windows/process_creation/proc_creation_win_dtrace_kernel_dump.yml` — Suspicious Kernel Dump Using Dtrace
+- `rules/windows/process_creation/proc_creation_win_dump64_defender_av_bypass_rename.yml` — Potential Windows Defender AV Bypass Via Dump64.EXE Rename
+- `rules/windows/process_creation/proc_creation_win_dumpminitool_execution.yml` — DumpMinitool Execution
+- `rules/windows/process_creation/proc_creation_win_dumpminitool_susp_execution.yml` — Suspicious DumpMinitool Execution
+- `rules/windows/process_creation/proc_creation_win_dxcap_arbitrary_binary_execution.yml` — New Capture Session Launched Via DXCap.EXE
+- `rules/windows/process_creation/proc_creation_win_esentutl_params.yml` — Esentutl Gather Credentials
+- `rules/windows/process_creation/proc_creation_win_event_logging_disable_via_key_minint.yml` — Security Event Logging Disabled via MiniNt Registry Key - Process
+- `rules/windows/process_creation/proc_creation_win_eventvwr_susp_child_process.yml` — Potentially Suspicious Event Viewer Child Process
+- `rules/windows/process_creation/proc_creation_win_explorer_folder_shortcut_via_shell_binary.yml` — File Explorer Folder Opened Using Explorer Folder Shortcut Via Shell
+- `rules/windows/process_creation/proc_creation_win_explorer_nouaccheck.yml` — Explorer NOUACCHECK Flag
+- `rules/windows/process_creation/proc_creation_win_findstr_gpp_passwords.yml` — Findstr GPP Passwords
+- `rules/windows/process_creation/proc_creation_win_findstr_lnk.yml` — Findstr Launching .lnk File
+- `rules/windows/process_creation/proc_creation_win_findstr_recon_everyone.yml` — Permission Misconfiguration Reconnaissance Via Findstr.EXE
+- `rules/windows/process_creation/proc_creation_win_findstr_recon_pipe_output.yml` — Recon Command Output Piped To Findstr.EXE
+- `rules/windows/process_creation/proc_creation_win_findstr_security_keyword_lookup.yml` — Security Tools Keyword Lookup Via Findstr.EXE
+- `rules/windows/process_creation/proc_creation_win_findstr_sysmon_discovery_via_default_altitude.yml` — Sysmon Discovery Via Default Driver Altitude Using Findstr.EXE
+- `rules/windows/process_creation/proc_creation_win_finger_execution.yml` — Finger.EXE Execution
+- `rules/windows/process_creation/proc_creation_win_fltmc_unload_driver.yml` — Filter Driver Unloaded Via Fltmc.EXE
+- `rules/windows/process_creation/proc_creation_win_fltmc_unload_driver_sysmon.yml` — Sysmon Driver Unloaded Via Fltmc.EXE
+- `rules/windows/process_creation/proc_creation_win_forfiles_child_process_masquerading.yml` — Forfiles.EXE Child Process Masquerading
+- `rules/windows/process_creation/proc_creation_win_format_uncommon_filesystem_load.yml` — Uncommon FileSystem Load Attempt By Format.com
+- `rules/windows/process_creation/proc_creation_win_fsi_fsharp_code_execution.yml` — Use of FSharp Interpreters
+- `rules/windows/process_creation/proc_creation_win_fsutil_drive_enumeration.yml` — Fsutil Drive Enumeration
+- `rules/windows/process_creation/proc_creation_win_fsutil_symlinkevaluation.yml` — Potentially Suspicious NTFS Symlink Behavior Modification
+- `rules/windows/process_creation/proc_creation_win_fsutil_usage.yml` — Fsutil Suspicious Invocation
+- `rules/windows/process_creation/proc_creation_win_gfxdownloadwrapper_arbitrary_file_download.yml` — Arbitrary File Download Via GfxDownloadWrapper.EXE
+- `rules/windows/process_creation/proc_creation_win_git_susp_clone.yml` — Suspicious Git Clone
+- `rules/windows/process_creation/proc_creation_win_github_self_hosted_runner.yml` — Github Self-Hosted Runner Execution
+- `rules/windows/process_creation/proc_creation_win_gpg4win_decryption.yml` — File Decryption Using Gpg4win
+- `rules/windows/process_creation/proc_creation_win_gpg4win_encryption.yml` — File Encryption Using Gpg4win
+- `rules/windows/process_creation/proc_creation_win_gpg4win_portable_execution.yml` — Portable Gpg.EXE Execution
+- `rules/windows/process_creation/proc_creation_win_gpg4win_susp_location.yml` — File Encryption/Decryption Via Gpg4win From Suspicious Locations
+- `rules/windows/process_creation/proc_creation_win_gpresult_execution.yml` — Gpresult Display Group Policy Information
+- `rules/windows/process_creation/proc_creation_win_gup_download.yml` — File Download Using Notepad++ GUP Utility
+- `rules/windows/process_creation/proc_creation_win_gup_susp_child_process.yml` — Suspicious Child Process of Notepad++ Updater - GUP.Exe
+- `rules/windows/process_creation/proc_creation_win_gup_suspicious_execution.yml` — Suspicious GUP Usage
+- `rules/windows/process_creation/proc_creation_win_hh_chm_execution.yml` — HH.EXE Execution
+- `rules/windows/process_creation/proc_creation_win_hh_chm_remote_download_or_execution.yml` — Remote CHM File Download/Execution Via HH.EXE
+- `rules/windows/process_creation/proc_creation_win_hh_html_help_susp_child_process.yml` — HTML Help HH.EXE Suspicious Child Process
+- `rules/windows/process_creation/proc_creation_win_hh_susp_execution.yml` — Suspicious HH.EXE Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_adcspwn.yml` — HackTool - ADCSPwn Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_bloodhound_sharphound.yml` — HackTool - Bloodhound/Sharphound Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_c3_rundll32_pattern.yml` — HackTool - F-Secure C3 Load by Rundll32
+- `rules/windows/process_creation/proc_creation_win_hktl_certify.yml` — HackTool - Certify Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_certipy.yml` — HackTool - Certipy Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_cobaltstrike_bloopers_cmd.yml` — Operator Bloopers Cobalt Strike Commands
+- `rules/windows/process_creation/proc_creation_win_hktl_cobaltstrike_bloopers_modules.yml` — Operator Bloopers Cobalt Strike Modules
+- `rules/windows/process_creation/proc_creation_win_hktl_cobaltstrike_load_by_rundll32.yml` — CobaltStrike Load by Rundll32
+- `rules/windows/process_creation/proc_creation_win_hktl_cobaltstrike_process_patterns.yml` — Potential CobaltStrike Process Patterns
+- `rules/windows/process_creation/proc_creation_win_hktl_coercedpotato.yml` — HackTool - CoercedPotato Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_covenant.yml` — HackTool - Covenant PowerShell Launcher
+- `rules/windows/process_creation/proc_creation_win_hktl_crackmapexec_execution.yml` — HackTool - CrackMapExec Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_crackmapexec_execution_patterns.yml` — HackTool - CrackMapExec Execution Patterns
+- `rules/windows/process_creation/proc_creation_win_hktl_crackmapexec_patterns.yml` — HackTool - CrackMapExec Process Patterns
+- `rules/windows/process_creation/proc_creation_win_hktl_crackmapexec_powershell_obfuscation.yml` — HackTool - CrackMapExec PowerShell Obfuscation
+- `rules/windows/process_creation/proc_creation_win_hktl_createminidump.yml` — HackTool - CreateMiniDump Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_dinjector.yml` — HackTool - DInjector PowerShell Cradle Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_doppelganger.yml` — HackTool - Doppelanger LSASS Dumper Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_dumpert.yml` — HackTool - Dumpert Process Dumper Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_edr_freeze.yml` — Hacktool - EDR-Freeze Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_edrsilencer.yml` — HackTool - EDRSilencer Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_empire_powershell_launch.yml` — HackTool - Empire PowerShell Launch Parameters
+- `rules/windows/process_creation/proc_creation_win_hktl_empire_powershell_uac_bypass.yml` — HackTool - Empire PowerShell UAC Bypass
+- `rules/windows/process_creation/proc_creation_win_hktl_evil_winrm.yml` — HackTool - WinRM Access Via Evil-WinRM
+- `rules/windows/process_creation/proc_creation_win_hktl_execution_via_imphashes.yml` — Hacktool Execution - Imphash
+- `rules/windows/process_creation/proc_creation_win_hktl_execution_via_pe_metadata.yml` — Hacktool Execution - PE Metadata
+- `rules/windows/process_creation/proc_creation_win_hktl_gmer.yml` — HackTool - GMER Rootkit Detector and Remover Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_handlekatz.yml` — HackTool - HandleKatz LSASS Dumper Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_hashcat.yml` — HackTool - Hashcat Password Cracker Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_hollowreaper.yml` — HackTool - HollowReaper Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_htran_or_natbypass.yml` — HackTool - Htran/NATBypass Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_hydra.yml` — HackTool - Hydra Password Bruteforce Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_impacket_lateral_movement.yml` — HackTool - Potential Impacket Lateral Movement Activity
+- `rules/windows/process_creation/proc_creation_win_hktl_impacket_tools.yml` — HackTool - Impacket Tools Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_impersonate.yml` — HackTool - Impersonate Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_inveigh.yml` — HackTool - Inveigh Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_invoke_obfuscation_clip.yml` — Invoke-Obfuscation CLIP+ Launcher
+- `rules/windows/process_creation/proc_creation_win_hktl_invoke_obfuscation_via_compress.yml` — Invoke-Obfuscation COMPRESS OBFUSCATION
+- `rules/windows/process_creation/proc_creation_win_hktl_invoke_obfuscation_via_use_mhsta.yml` — Invoke-Obfuscation Via Use MSHTA
+- `rules/windows/process_creation/proc_creation_win_hktl_invoke_obfuscation_via_var.yml` — Invoke-Obfuscation VAR++ LAUNCHER OBFUSCATION
+- `rules/windows/process_creation/proc_creation_win_hktl_jlaive_batch_execution.yml` — HackTool - Jlaive In-Memory Assembly Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_koadic.yml` — HackTool - Koadic Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_krbrelay.yml` — HackTool - KrbRelay Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_krbrelay_remote.yml` — HackTool - RemoteKrbRelay Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_krbrelayup.yml` — HackTool - KrbRelayUp Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_localpotato.yml` — HackTool - LocalPotato Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_meterpreter_getsystem.yml` — Potential Meterpreter/CobaltStrike Activity
+- `rules/windows/process_creation/proc_creation_win_hktl_mimikatz_command_line.yml` — HackTool - Mimikatz Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_netexec.yml` — HackTool - NetExec Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_pchunter.yml` — HackTool - PCHunter Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_powersploit_empire_default_schtasks.yml` — HackTool - Default PowerSploit/Empire Scheduled Task Creation
+- `rules/windows/process_creation/proc_creation_win_hktl_powertool.yml` — HackTool - PowerTool Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_purplesharp_indicators.yml` — HackTool - PurpleSharp Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_pypykatz.yml` — HackTool - Pypykatz Credentials Dumping Activity
+- `rules/windows/process_creation/proc_creation_win_hktl_quarks_pwdump.yml` — HackTool - Quarks PwDump Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_redmimicry_winnti_playbook.yml` — HackTool - RedMimicry Winnti Playbook Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_relay_attacks_tools.yml` — Potential SMB Relay Attack Tool Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_rubeus.yml` — HackTool - Rubeus Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_safetykatz.yml` — HackTool - SafetyKatz Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_secutyxploded.yml` — HackTool - SecurityXploded Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_selectmyparent.yml` — HackTool - PPID Spoofing SelectMyParent Tool Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_sharp_chisel.yml` — HackTool - SharpChisel Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_sharp_dpapi_execution.yml` — HackTool - SharpDPAPI Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_sharp_impersonation.yml` — HackTool - SharpImpersonation Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_sharp_ldap_monitor.yml` — HackTool - SharpLDAPmonitor Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_sharpersist.yml` — HackTool - SharPersist Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_sharpevtmute.yml` — HackTool - SharpEvtMute Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_sharpldapwhoami.yml` — HackTool - SharpLdapWhoami Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_sharpmove.yml` — HackTool - SharpMove Tool Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_sharpsuccessor_execution.yml` — HKTL - SharpSuccessor Privilege Escalation Tool Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_sharpup.yml` — HackTool - SharpUp PrivEsc Tool Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_sharpview.yml` — HackTool - SharpView Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_sharpwsus_wsuspendu_execution.yml` — HackTool - SharpWSUS/WSUSpendu Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_silenttrinity_stager.yml` — HackTool - SILENTTRINITY Stager Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_sliver_c2_execution_pattern.yml` — HackTool - Sliver C2 Implant Activity Pattern
+- `rules/windows/process_creation/proc_creation_win_hktl_soaphound_execution.yml` — HackTool - SOAPHound Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_stracciatella_execution.yml` — HackTool - Stracciatella Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_sysmoneop.yml` — HackTool - SysmonEOP Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_trufflesnout.yml` — HackTool - TruffleSnout Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_uacme.yml` — HackTool - UACMe Akagi Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_wce.yml` — HackTool - Windows Credential Editor (WCE) Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_winpeas.yml` — HackTool - winPEAS Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_winpwn.yml` — HackTool - WinPwn Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_wmiexec_default_powershell.yml` — HackTool - Wmiexec Default Powershell Command
+- `rules/windows/process_creation/proc_creation_win_hktl_xordump.yml` — HackTool - XORDump Execution
+- `rules/windows/process_creation/proc_creation_win_hktl_zipexec.yml` — Suspicious ZipExec Execution
+- `rules/windows/process_creation/proc_creation_win_hostname_execution.yml` — Suspicious Execution of Hostname
+- `rules/windows/process_creation/proc_creation_win_hvci_registry_tampering.yml` — Hypervisor-protected Code Integrity (HVCI) Related Registry Tampering Via CommandLine
+- `rules/windows/process_creation/proc_creation_win_hwp_exploits.yml` — Suspicious HWP Sub Processes
+- `rules/windows/process_creation/proc_creation_win_hxtsr_masquerading.yml` — Potential Fake Instance Of Hxtsr.EXE Executed
+- `rules/windows/process_creation/proc_creation_win_icacls_deny.yml` — Use Icacls to Hide File to Everyone
+- `rules/windows/process_creation/proc_creation_win_ieexec_download.yml` — File Download And Execution Via IEExec.EXE
+- `rules/windows/process_creation/proc_creation_win_iis_appcmd_http_logging.yml` — Disable Windows IIS HTTP Logging
+- `rules/windows/process_creation/proc_creation_win_iis_appcmd_service_account_password_dumped.yml` — Microsoft IIS Service Account Password Dumped
+- `rules/windows/process_creation/proc_creation_win_iis_appcmd_susp_rewrite_rule.yml` — Suspicious IIS URL GlobalRules Rewrite Via AppCmd
+- `rules/windows/process_creation/proc_creation_win_iis_connection_strings_decryption.yml` — Microsoft IIS Connection Strings Decryption
+- `rules/windows/process_creation/proc_creation_win_iis_logs_deletion.yml` — IIS WebServer Log Deletion via CommandLine Utilities
+- `rules/windows/process_creation/proc_creation_win_iis_susp_module_registration.yml` — Suspicious IIS Module Registration
+- `rules/windows/process_creation/proc_creation_win_ilasm_il_code_compilation.yml` — C# IL Code Compilation Via Ilasm.EXE
+- `rules/windows/process_creation/proc_creation_win_imagingdevices_unusual_parents.yml` — ImagingDevices Unusual Parent/Child Processes
+- `rules/windows/process_creation/proc_creation_win_imewbdld_download.yml` — Arbitrary File Download Via IMEWDBLD.EXE
+- `rules/windows/process_creation/proc_creation_win_infdefaultinstall_execute_sct_scripts.yml` — InfDefaultInstall.exe .inf Execution
+- `rules/windows/process_creation/proc_creation_win_installutil_download.yml` — File Download Via InstallUtil.EXE
+- `rules/windows/process_creation/proc_creation_win_instalutil_no_log_execution.yml` — Suspicious Execution of InstallUtil Without Log
+- `rules/windows/process_creation/proc_creation_win_java_keytool_susp_child_process.yml` — Suspicious Shells Spawn by Java Utility Keytool
+- `rules/windows/process_creation/proc_creation_win_java_manageengine_susp_child_process.yml` — Suspicious Child Process Of Manage Engine ServiceDesk
+- `rules/windows/process_creation/proc_creation_win_java_remote_debugging.yml` — Java Running with Remote Debugging
+- `rules/windows/process_creation/proc_creation_win_java_susp_child_process.yml` — Suspicious Processes Spawned by Java.EXE
+- `rules/windows/process_creation/proc_creation_win_java_susp_child_process_2.yml` — Shell Process Spawned by Java.EXE
+- `rules/windows/process_creation/proc_creation_win_java_sysaidserver_susp_child_process.yml` — Suspicious SysAidServer Child
+- `rules/windows/process_creation/proc_creation_win_jsc_execution.yml` — JScript Compiler Execution
+- `rules/windows/process_creation/proc_creation_win_kavremover_uncommon_execution.yml` — Kavremover Dropped Binary LOLBIN Usage
+- `rules/windows/process_creation/proc_creation_win_kd_execution.yml` — Windows Kernel Debugger Execution
+- `rules/windows/process_creation/proc_creation_win_kerberos_coercion_via_dns_spn_spoofing.yml` — Attempts of Kerberos Coercion Via DNS SPN Spoofing
+- `rules/windows/process_creation/proc_creation_win_keyscrambler_susp_child_process.yml` — Potentially Suspicious Child Process of KeyScrambler.exe
+- `rules/windows/process_creation/proc_creation_win_ksetup_password_change_computer.yml` — Computer Password Change Via Ksetup.EXE
+- `rules/windows/process_creation/proc_creation_win_ksetup_password_change_user.yml` — Logged-On User Password Change Via Ksetup.EXE
+- `rules/windows/process_creation/proc_creation_win_ldifde_export.yml` — Active Directory Structure Export Via Ldifde.EXE
+- `rules/windows/process_creation/proc_creation_win_ldifde_file_load.yml` — Import LDAP Data Interchange Format File Via Ldifde.EXE
+- `rules/windows/process_creation/proc_creation_win_link_uncommon_parent_process.yml` — Uncommon Link.EXE Parent Process
+- `rules/windows/process_creation/proc_creation_win_logman_disable_eventlog.yml` — Suspicious Windows Trace ETW Session Tamper Via Logman.EXE
+- `rules/windows/process_creation/proc_creation_win_lolbin_data_exfiltration_by_using_datasvcutil.yml` — LOLBAS Data Exfiltration by DataSvcUtil.exe
+- `rules/windows/process_creation/proc_creation_win_lolbin_devtoolslauncher.yml` — Devtoolslauncher.exe Executes Specified Binary
+- `rules/windows/process_creation/proc_creation_win_lolbin_diantz_remote_cab.yml` — Suspicious Diantz Download and Compress Into a CAB File
+- `rules/windows/process_creation/proc_creation_win_lolbin_extrac32.yml` — Suspicious Extrac32 Execution
+- `rules/windows/process_creation/proc_creation_win_lolbin_gather_network_info.yml` — Potential Reconnaissance Activity Via GatherNetworkInfo.VBS
+- `rules/windows/process_creation/proc_creation_win_lolbin_gpscript.yml` — Gpscript Execution
+- `rules/windows/process_creation/proc_creation_win_lolbin_launch_vsdevshell.yml` — Launch-VsDevShell.PS1 Proxy Execution
+- `rules/windows/process_creation/proc_creation_win_lolbin_manage_bde.yml` — Potential Manage-bde.wsf Abuse To Proxy Execution
+- `rules/windows/process_creation/proc_creation_win_lolbin_mavinject_process_injection.yml` — Mavinject Inject DLL Into Running Process
+- `rules/windows/process_creation/proc_creation_win_lolbin_mpiexec.yml` — MpiExec Lolbin
+- `rules/windows/process_creation/proc_creation_win_lolbin_msdeploy.yml` — Execute Files with Msdeploy.exe
+- `rules/windows/process_creation/proc_creation_win_lolbin_openconsole.yml` — Use of OpenConsole
+- `rules/windows/process_creation/proc_creation_win_lolbin_openwith.yml` — OpenWith.exe Executes Specified Binary
+- `rules/windows/process_creation/proc_creation_win_lolbin_pcalua.yml` — Use of Pcalua For Execution
+- `rules/windows/process_creation/proc_creation_win_lolbin_pcwrun.yml` — Indirect Command Execution By Program Compatibility Wizard
+- `rules/windows/process_creation/proc_creation_win_lolbin_pcwrun_follina.yml` — Execute Pcwrun.EXE To Leverage Follina
+- `rules/windows/process_creation/proc_creation_win_lolbin_pcwutl.yml` — Code Execution via Pcwutl.dll
+- `rules/windows/process_creation/proc_creation_win_lolbin_pester.yml` — Execute Code with Pester.bat as Parent
+- `rules/windows/process_creation/proc_creation_win_lolbin_pester_1.yml` — Execute Code with Pester.bat
+- `rules/windows/process_creation/proc_creation_win_lolbin_printbrm.yml` — PrintBrm ZIP Creation of Extraction
+- `rules/windows/process_creation/proc_creation_win_lolbin_pubprn.yml` — Pubprn.vbs Proxy Execution
+- `rules/windows/process_creation/proc_creation_win_lolbin_rasautou_dll_execution.yml` — DLL Execution via Rasautou.exe
+- `rules/windows/process_creation/proc_creation_win_lolbin_register_app.yml` — REGISTER_APP.VBS Proxy Execution
+- `rules/windows/process_creation/proc_creation_win_lolbin_remote.yml` — Use of Remote.exe
+- `rules/windows/process_creation/proc_creation_win_lolbin_runexehelper.yml` — Lolbin Runexehelper Use As Proxy
+- `rules/windows/process_creation/proc_creation_win_lolbin_runscripthelper.yml` — Suspicious Runscripthelper.exe
+- `rules/windows/process_creation/proc_creation_win_lolbin_scriptrunner.yml` — Use of Scriptrunner.exe
+- `rules/windows/process_creation/proc_creation_win_lolbin_settingsynchost.yml` — Using SettingSyncHost.exe as LOLBin
+- `rules/windows/process_creation/proc_creation_win_lolbin_sftp.yml` — Use Of The SFTP.EXE Binary As A LOLBIN
+- `rules/windows/process_creation/proc_creation_win_lolbin_susp_driver_installed_by_pnputil.yml` — Suspicious Driver Install by pnputil.exe
+- `rules/windows/process_creation/proc_creation_win_lolbin_susp_grpconv.yml` — Suspicious GrpConv Execution
+- `rules/windows/process_creation/proc_creation_win_lolbin_susp_sqldumper_activity.yml` — Dumping Process via Sqldumper.exe
+- `rules/windows/process_creation/proc_creation_win_lolbin_syncappvpublishingserver_execute_psh.yml` — SyncAppvPublishingServer Execute Arbitrary PowerShell Code
+- `rules/windows/process_creation/proc_creation_win_lolbin_syncappvpublishingserver_vbs_execute_psh.yml` — SyncAppvPublishingServer VBS Execute Arbitrary PowerShell Code
+- `rules/windows/process_creation/proc_creation_win_lolbin_tracker.yml` — Potential DLL Injection Or Execution Using Tracker.exe
+- `rules/windows/process_creation/proc_creation_win_lolbin_ttdinject.yml` — Use of TTDInject.exe
+- `rules/windows/process_creation/proc_creation_win_lolbin_tttracer_mod_load.yml` — Time Travel Debugging Utility Usage
+- `rules/windows/process_creation/proc_creation_win_lolbin_utilityfunctions.yml` — UtilityFunctions.ps1 Proxy Dll
+- `rules/windows/process_creation/proc_creation_win_lolbin_visual_basic_compiler.yml` — Visual Basic Command Line Compiler Usage
+- `rules/windows/process_creation/proc_creation_win_lolbin_visualuiaverifynative.yml` — Use of VisualUiaVerifyNative.exe
+- `rules/windows/process_creation/proc_creation_win_lolbin_vsiisexelauncher.yml` — Use of VSIISExeLauncher.exe
+- `rules/windows/process_creation/proc_creation_win_lolbin_wfc.yml` — Use of Wfc.exe
+- `rules/windows/process_creation/proc_creation_win_lolscript_register_app.yml` — Potential Register_App.Vbs LOLScript Abuse
+- `rules/windows/process_creation/proc_creation_win_lsa_ppl_protection_setting_modification_via_cli.yml` — LSA PPL Protection Setting Modification via CommandLine
+- `rules/windows/process_creation/proc_creation_win_lsass_process_clone.yml` — Potential Credential Dumping Via LSASS Process Clone
+- `rules/windows/process_creation/proc_creation_win_mftrace_child_process.yml` — Potential Mftrace.EXE Abuse
+- `rules/windows/process_creation/proc_creation_win_mmc_default_domain_gpo_modification_via_gpme.yml` — Windows Default Domain GPO Modification via GPME
+- `rules/windows/process_creation/proc_creation_win_mmc_mmc20_lateral_movement.yml` — MMC20 Lateral Movement
+- `rules/windows/process_creation/proc_creation_win_mmc_rlo_abuse_pattern.yml` — MMC Executing Files with Reversed Extensions Using RTLO Abuse
+- `rules/windows/process_creation/proc_creation_win_mmc_susp_child_process.yml` — MMC Spawning Windows Shell
+- `rules/windows/process_creation/proc_creation_win_mode_codepage_russian.yml` — CodePage Modification Via MODE.COM To Russian Language
+- `rules/windows/process_creation/proc_creation_win_mofcomp_execution.yml` — Potential Suspicious Mofcomp Execution
+- `rules/windows/process_creation/proc_creation_win_mpcmdrun_dll_sideload_defender.yml` — Potential Mpclient.DLL Sideloading Via Defender Binaries
+- `rules/windows/process_creation/proc_creation_win_mpcmdrun_download_arbitrary_file.yml` — File Download Via Windows Defender MpCmpRun.EXE
+- `rules/windows/process_creation/proc_creation_win_mpcmdrun_remove_windows_defender_definition.yml` — Windows Defender Definition Files Removed
+- `rules/windows/process_creation/proc_creation_win_msbuild_susp_parent_process.yml` — Suspicious Msbuild Execution By Uncommon Parent Process
+- `rules/windows/process_creation/proc_creation_win_msdt_susp_parent.yml` — Suspicious MSDT Parent Process
+- `rules/windows/process_creation/proc_creation_win_msedge_proxy_download.yml` — Arbitrary File Download Via MSEDGE_PROXY.EXE
+- `rules/windows/process_creation/proc_creation_win_mshta_http.yml` — Remotely Hosted HTA File Executed Via Mshta.EXE
+- `rules/windows/process_creation/proc_creation_win_mshta_inline_vbscript.yml` — Wscript Shell Run In CommandLine
+- `rules/windows/process_creation/proc_creation_win_mshta_javascript.yml` — Suspicious JavaScript Execution Via Mshta.EXE
+- `rules/windows/process_creation/proc_creation_win_mshta_lethalhta_technique.yml` — Potential LethalHTA Technique Execution
+- `rules/windows/process_creation/proc_creation_win_mshta_susp_child_processes.yml` — Suspicious MSHTA Child Process
+- `rules/windows/process_creation/proc_creation_win_mshta_susp_execution.yml` — MSHTA Execution with Suspicious File Extensions
+- `rules/windows/process_creation/proc_creation_win_mshta_susp_pattern.yml` — Suspicious Mshta.EXE Execution Patterns
+- `rules/windows/process_creation/proc_creation_win_msiexec_embedding.yml` — Suspicious MsiExec Embedding Parent
+- `rules/windows/process_creation/proc_creation_win_msiexec_masquerading.yml` — Potential MsiExec Masquerading
+- `rules/windows/process_creation/proc_creation_win_msiexec_web_install.yml` — MsiExec Web Install
+- `rules/windows/process_creation/proc_creation_win_msix_ai_stub_execution.yml` — Windows MSIX Package Support Framework AI_STUBS Execution
+- `rules/windows/process_creation/proc_creation_win_msohtmed_download.yml` — Arbitrary File Download Via MSOHTMED.EXE
+- `rules/windows/process_creation/proc_creation_win_mspub_download.yml` — Arbitrary File Download Via MSPUB.EXE
+- `rules/windows/process_creation/proc_creation_win_msra_process_injection.yml` — Potential Process Injection Via Msra.EXE
+- `rules/windows/process_creation/proc_creation_win_mssql_sqlps_susp_execution.yml` — Detection of PowerShell Execution via Sqlps.exe
+- `rules/windows/process_creation/proc_creation_win_mssql_sqltoolsps_susp_execution.yml` — SQL Client Tools PowerShell Session Detection
+- `rules/windows/process_creation/proc_creation_win_mssql_susp_child_process.yml` — Suspicious Child Process Of SQL Server
+- `rules/windows/process_creation/proc_creation_win_mssql_veaam_susp_child_processes.yml` — Suspicious Child Process Of Veeam Dabatase
+- `rules/windows/process_creation/proc_creation_win_mstsc_rdp_hijack_shadowing.yml` — Potential MSTSC Shadowing Activity
+- `rules/windows/process_creation/proc_creation_win_mstsc_run_local_rdp_file.yml` — Mstsc.EXE Execution With Local RDP File
+- `rules/windows/process_creation/proc_creation_win_mstsc_run_local_rdp_file_susp_location.yml` — Suspicious Mstsc.EXE Execution With Local RDP File
+- `rules/windows/process_creation/proc_creation_win_mstsc_run_local_rpd_file_susp_parent.yml` — Mstsc.EXE Execution From Uncommon Parent
+- `rules/windows/process_creation/proc_creation_win_msxsl_execution.yml` — Msxsl.EXE Execution
+- `rules/windows/process_creation/proc_creation_win_msxsl_remote_execution.yml` — Remote XSL Execution Via Msxsl.EXE
+- `rules/windows/process_creation/proc_creation_win_net_groups_and_accounts_recon.yml` — Suspicious Group And Account Reconnaissance Activity Using Net.EXE
+- `rules/windows/process_creation/proc_creation_win_net_share_unmount.yml` — Unmount Share Via Net.EXE
+- `rules/windows/process_creation/proc_creation_win_net_start_service.yml` — Start Windows Service Via Net.EXE
+- `rules/windows/process_creation/proc_creation_win_net_stop_service.yml` — Stop Windows Service Via Net.EXE
+- `rules/windows/process_creation/proc_creation_win_net_use_mount_admin_share.yml` — Windows Admin Share Mount Via Net.EXE
+- `rules/windows/process_creation/proc_creation_win_net_use_mount_internet_share.yml` — Windows Internet Hosted WebDav Share Mount Via Net.EXE
+- `rules/windows/process_creation/proc_creation_win_net_use_mount_share.yml` — Windows Share Mount Via Net.EXE
+- `rules/windows/process_creation/proc_creation_win_net_use_network_connections_discovery.yml` — System Network Connections Discovery Via Net.EXE
+- `rules/windows/process_creation/proc_creation_win_net_use_password_plaintext.yml` — Password Provided In Command Line Of Net.EXE
+- `rules/windows/process_creation/proc_creation_win_net_user_add.yml` — New User Created Via Net.EXE
+- `rules/windows/process_creation/proc_creation_win_net_user_add_never_expire.yml` — New User Created Via Net.EXE With Never Expire Option
+- `rules/windows/process_creation/proc_creation_win_net_user_default_accounts_manipulation.yml` — Suspicious Manipulation Of Default Accounts Via Net.EXE
+- `rules/windows/process_creation/proc_creation_win_net_view_share_and_sessions_enum.yml` — Share And Session Enumeration Using Net.EXE
+- `rules/windows/process_creation/proc_creation_win_netsh_fw_add_rule.yml` — New Firewall Rule Added Via Netsh.EXE
+- `rules/windows/process_creation/proc_creation_win_netsh_fw_allow_program_in_susp_location.yml` — Suspicious Program Location Whitelisted In Firewall Via Netsh.EXE
+- `rules/windows/process_creation/proc_creation_win_netsh_fw_allow_rdp.yml` — RDP Connection Allowed Via Netsh.EXE
+- `rules/windows/process_creation/proc_creation_win_netsh_fw_delete_rule.yml` — Firewall Rule Deleted Via Netsh.EXE
+- `rules/windows/process_creation/proc_creation_win_netsh_fw_disable.yml` — Firewall Disabled via Netsh.EXE
+- `rules/windows/process_creation/proc_creation_win_netsh_fw_enable_group_rule.yml` — Netsh Allow Group Policy on Microsoft Defender Firewall
+- `rules/windows/process_creation/proc_creation_win_netsh_fw_rules_discovery.yml` — Firewall Configuration Discovery Via Netsh.EXE
+- `rules/windows/process_creation/proc_creation_win_netsh_fw_set_rule.yml` — Firewall Rule Update Via Netsh.EXE
+- `rules/windows/process_creation/proc_creation_win_netsh_helper_dll_persistence.yml` — Potential Persistence Via Netsh Helper DLL
+- `rules/windows/process_creation/proc_creation_win_netsh_packet_capture.yml` — New Network Trace Capture Started Via Netsh.EXE
+- `rules/windows/process_creation/proc_creation_win_netsh_port_forwarding.yml` — New Port Forwarding Rule Added Via Netsh.EXE
+- `rules/windows/process_creation/proc_creation_win_netsh_port_forwarding_3389.yml` — RDP Port Forwarding Rule Added Via Netsh.EXE
+- `rules/windows/process_creation/proc_creation_win_netsh_wifi_credential_harvesting.yml` — Harvesting Of Wifi Credentials Via Netsh.EXE
+- `rules/windows/process_creation/proc_creation_win_nltest_execution.yml` — Nltest.EXE Execution
+- `rules/windows/process_creation/proc_creation_win_nltest_recon.yml` — Potential Recon Activity Via Nltest.EXE
+- `rules/windows/process_creation/proc_creation_win_node_abuse.yml` — Potential Arbitrary Code Execution Via Node.EXE
+- `rules/windows/process_creation/proc_creation_win_node_adobe_creative_cloud_abuse.yml` — Node Process Executions
+- `rules/windows/process_creation/proc_creation_win_notepad_local_passwd_discovery.yml` — Notepad Password Files Discovery
+- `rules/windows/process_creation/proc_creation_win_nslookup_domain_discovery.yml` — Network Reconnaissance Activity
+- `rules/windows/process_creation/proc_creation_win_nslookup_poweshell_download.yml` — Nslookup PowerShell Download Cradle - ProcessCreation
+- `rules/windows/process_creation/proc_creation_win_ntdsutil_susp_usage.yml` — Suspicious Usage Of Active Directory Diagnostic Tool (ntdsutil.exe)
+- `rules/windows/process_creation/proc_creation_win_ntdsutil_usage.yml` — Invocation of Active Directory Diagnostic Tool (ntdsutil.exe)
+- `rules/windows/process_creation/proc_creation_win_odbcconf_driver_install.yml` — Driver/DLL Installation Via Odbcconf.EXE
+- `rules/windows/process_creation/proc_creation_win_odbcconf_driver_install_susp.yml` — Suspicious Driver/DLL Installation Via Odbcconf.EXE
+- `rules/windows/process_creation/proc_creation_win_odbcconf_exec_susp_locations.yml` — Odbcconf.EXE Suspicious DLL Location
+- `rules/windows/process_creation/proc_creation_win_odbcconf_register_dll_regsvr.yml` — New DLL Registered Via Odbcconf.EXE
+- `rules/windows/process_creation/proc_creation_win_odbcconf_register_dll_regsvr_susp.yml` — Potentially Suspicious DLL Registered Via Odbcconf.EXE
+- `rules/windows/process_creation/proc_creation_win_odbcconf_uncommon_child_process.yml` — Uncommon Child Process Spawned By Odbcconf.EXE
+- `rules/windows/process_creation/proc_creation_win_office_arbitrary_cli_download.yml` — Potential Arbitrary File Download Using Office Application
+- `rules/windows/process_creation/proc_creation_win_office_excel_dcom_lateral_movement.yml` — Potential Excel.EXE DCOM Lateral Movement Via ActivateMicrosoftApp
+- `rules/windows/process_creation/proc_creation_win_office_exec_from_trusted_locations.yml` — Potentially Suspicious Office Document Executed From Trusted Location
+- `rules/windows/process_creation/proc_creation_win_office_onenote_embedded_script_execution.yml` — OneNote.EXE Execution of Malicious Embedded Scripts
+- `rules/windows/process_creation/proc_creation_win_office_onenote_susp_child_processes.yml` — Suspicious Microsoft OneNote Child Process
+- `rules/windows/process_creation/proc_creation_win_office_outlook_enable_unsafe_client_mail_rules.yml` — Outlook EnableUnsafeClientMailRules Setting Enabled
+- `rules/windows/process_creation/proc_creation_win_office_outlook_execution_from_temp.yml` — Suspicious Execution From Outlook Temporary Folder
+- `rules/windows/process_creation/proc_creation_win_office_outlook_susp_child_processes.yml` — Suspicious Outlook Child Process
+- `rules/windows/process_creation/proc_creation_win_office_outlook_susp_child_processes_remote.yml` — Suspicious Remote Child Process From Outlook
+- `rules/windows/process_creation/proc_creation_win_office_spawn_exe_from_users_directory.yml` — Suspicious Binary In User Directory Spawned From Office Application
+- `rules/windows/process_creation/proc_creation_win_office_winword_dll_load.yml` — Potential Arbitrary DLL Load Using Winword
+- `rules/windows/process_creation/proc_creation_win_pdqdeploy_execution.yml` — PDQ Deploy Remote Adminstartion Tool Execution
+- `rules/windows/process_creation/proc_creation_win_pdqdeploy_runner_susp_children.yml` — Potentially Suspicious Execution Of PDQDeployRunner
+- `rules/windows/process_creation/proc_creation_win_perl_inline_command_execution.yml` — Perl Inline Command Execution
+- `rules/windows/process_creation/proc_creation_win_php_inline_command_execution.yml` — Php Inline Command Execution
+- `rules/windows/process_creation/proc_creation_win_pktmon_execution.yml` — PktMon.EXE Execution
+- `rules/windows/process_creation/proc_creation_win_plink_port_forwarding.yml` — Suspicious Plink Port Forwarding
+- `rules/windows/process_creation/proc_creation_win_plink_susp_tunneling.yml` — Potential RDP Tunneling Via Plink
+- `rules/windows/process_creation/proc_creation_win_powercfg_execution.yml` — Suspicious Powercfg Execution To Change Lock Screen Timeout
+- `rules/windows/process_creation/proc_creation_win_powershell_aadinternals_cmdlets_execution.yml` — AADInternals PowerShell Cmdlets Execution - ProccessCreation
+- `rules/windows/process_creation/proc_creation_win_powershell_active_directory_module_dll_import.yml` — Potential Active Directory Enumeration Using AD Module - ProcCreation
+- `rules/windows/process_creation/proc_creation_win_powershell_add_windows_capability.yml` — Add Windows Capability Via PowerShell Cmdlet
+- `rules/windows/process_creation/proc_creation_win_powershell_amsi_init_failed_bypass.yml` — Potential AMSI Bypass Via .NET Reflection
+- `rules/windows/process_creation/proc_creation_win_powershell_amsi_null_bits_bypass.yml` — Potential AMSI Bypass Using NULL Bits
+- `rules/windows/process_creation/proc_creation_win_powershell_audio_capture.yml` — Audio Capture via PowerShell
+- `rules/windows/process_creation/proc_creation_win_powershell_base64_encoded_cmd.yml` — Suspicious Encoded PowerShell Command Line
+- `rules/windows/process_creation/proc_creation_win_powershell_base64_encoded_cmd_patterns.yml` — Suspicious PowerShell Encoded Command Patterns
+- `rules/windows/process_creation/proc_creation_win_powershell_base64_encoded_obfusc.yml` — Suspicious Obfuscated PowerShell Code
+- `rules/windows/process_creation/proc_creation_win_powershell_base64_hidden_flag.yml` — Malicious Base64 Encoded PowerShell Keywords in Command Lines
+- `rules/windows/process_creation/proc_creation_win_powershell_base64_invoke.yml` — PowerShell Base64 Encoded Invoke Keyword
+- `rules/windows/process_creation/proc_creation_win_powershell_base64_reflection_assembly_load.yml` — PowerShell Base64 Encoded Reflective Assembly Load
+- `rules/windows/process_creation/proc_creation_win_powershell_base64_reflection_assembly_load_obfusc.yml` — Suspicious Encoded And Obfuscated Reflection Assembly Load Function Call
+- `rules/windows/process_creation/proc_creation_win_powershell_base64_wmi_classes.yml` — PowerShell Base64 Encoded WMI Classes
+- `rules/windows/process_creation/proc_creation_win_powershell_cl_invocation.yml` — Potential Process Execution Proxy Via CL_Invocation.ps1
+- `rules/windows/process_creation/proc_creation_win_powershell_cl_loadassembly.yml` — Assembly Loading Via CL_LoadAssembly.ps1
+- `rules/windows/process_creation/proc_creation_win_powershell_cl_mutexverifiers.yml` — Potential Script Proxy Execution Via CL_Mutexverifiers.ps1
+- `rules/windows/process_creation/proc_creation_win_powershell_cmdline_convertto_securestring.yml` — ConvertTo-SecureString Cmdlet Usage Via CommandLine
+- `rules/windows/process_creation/proc_creation_win_powershell_cmdline_reversed_strings.yml` — Potential PowerShell Obfuscation Via Reversed Commands
+- `rules/windows/process_creation/proc_creation_win_powershell_comobject_msi.yml` — Obfuscated PowerShell MSI Install via WindowsInstaller COM
+- `rules/windows/process_creation/proc_creation_win_powershell_comobject_msi_remote.yml` — PowerShell MSI Install via WindowsInstaller COM From Remote Location
+- `rules/windows/process_creation/proc_creation_win_powershell_computer_discovery_get_adcomputer.yml` — Computer Discovery And Export Via Get-ADComputer Cmdlet
+- `rules/windows/process_creation/proc_creation_win_powershell_console_history_file_access.yml` — Potential PowerShell Console History Access Attempt via History File
+- `rules/windows/process_creation/proc_creation_win_powershell_create_service.yml` — New Service Creation Using PowerShell
+- `rules/windows/process_creation/proc_creation_win_powershell_decode_gzip.yml` — Gzip Archive Decode Via PowerShell
+- `rules/windows/process_creation/proc_creation_win_powershell_decrypt_pattern.yml` — PowerShell Execution With Potential Decryption Capabilities
+- `rules/windows/process_creation/proc_creation_win_powershell_defender_exclusion.yml` — Powershell Defender Exclusion
+- `rules/windows/process_creation/proc_creation_win_powershell_disable_defender_av_security_monitoring.yml` — Disable Windows Defender AV Security Monitoring
+- `rules/windows/process_creation/proc_creation_win_powershell_disable_firewall.yml` — Windows Firewall Disabled via PowerShell
+- `rules/windows/process_creation/proc_creation_win_powershell_disable_ie_features.yml` — Disabled IE Security Features
+- `rules/windows/process_creation/proc_creation_win_powershell_downgrade_attack.yml` — Potential PowerShell Downgrade Attack
+- `rules/windows/process_creation/proc_creation_win_powershell_download_com_cradles.yml` — Potential COM Objects Download Cradles Usage - Process Creation
+- `rules/windows/process_creation/proc_creation_win_powershell_download_cradle_obfuscated.yml` — Obfuscated PowerShell OneLiner Execution
+- `rules/windows/process_creation/proc_creation_win_powershell_download_dll.yml` — Potential DLL File Download Via PowerShell Invoke-WebRequest
+- `rules/windows/process_creation/proc_creation_win_powershell_download_iex.yml` — PowerShell Download and Execution Cradles
+- `rules/windows/process_creation/proc_creation_win_powershell_download_patterns.yml` — PowerShell Download Pattern
+- `rules/windows/process_creation/proc_creation_win_powershell_dsinternals_cmdlets.yml` — DSInternals Suspicious PowerShell Cmdlets
+- `rules/windows/process_creation/proc_creation_win_powershell_email_exfil.yml` — Email Exifiltration Via Powershell
+- `rules/windows/process_creation/proc_creation_win_powershell_enable_susp_windows_optional_feature.yml` — Potential Suspicious Windows Feature Enabled - ProcCreation
+- `rules/windows/process_creation/proc_creation_win_powershell_encode.yml` — Suspicious Execution of Powershell with Base64
+- `rules/windows/process_creation/proc_creation_win_powershell_encoding_patterns.yml` — Potential Encoded PowerShell Patterns In CommandLine
+- `rules/windows/process_creation/proc_creation_win_powershell_exec_data_file.yml` — Powershell Inline Execution From A File
+- `rules/windows/process_creation/proc_creation_win_powershell_export_certificate.yml` — Certificate Exported Via PowerShell
+- `rules/windows/process_creation/proc_creation_win_powershell_frombase64string.yml` — Base64 Encoded PowerShell Command Detected
+- `rules/windows/process_creation/proc_creation_win_powershell_frombase64string_archive.yml` — Suspicious FromBase64String Usage On Gzip Archive - Process Creation
+- `rules/windows/process_creation/proc_creation_win_powershell_get_clipboard.yml` — PowerShell Get-Clipboard Cmdlet Via CLI
+- `rules/windows/process_creation/proc_creation_win_powershell_get_localgroup_member_recon.yml` — Suspicious Reconnaissance Activity Using Get-LocalGroupMember Cmdlet
+- `rules/windows/process_creation/proc_creation_win_powershell_getprocess_lsass.yml` — PowerShell Get-Process LSASS
+- `rules/windows/process_creation/proc_creation_win_powershell_hide_services_via_set_service.yml` — Abuse of Service Permissions to Hide Services Via Set-Service
+- `rules/windows/process_creation/proc_creation_win_powershell_iex_patterns.yml` — Suspicious PowerShell IEX Execution Patterns
+- `rules/windows/process_creation/proc_creation_win_powershell_import_cert_susp_locations.yml` — Root Certificate Installed From Susp Locations
+- `rules/windows/process_creation/proc_creation_win_powershell_import_module_susp_dirs.yml` — Import PowerShell Modules From Suspicious Directories - ProcCreation
+- `rules/windows/process_creation/proc_creation_win_powershell_install_unsigned_appx_packages.yml` — Unsigned AppX Installation Attempt Using Add-AppxPackage
+- `rules/windows/process_creation/proc_creation_win_powershell_invocation_specific.yml` — Suspicious PowerShell Invocations - Specific - ProcessCreation
+- `rules/windows/process_creation/proc_creation_win_powershell_invoke_webrequest_direct_ip.yml` — Suspicious Invoke-WebRequest Execution With DirectIP
+- `rules/windows/process_creation/proc_creation_win_powershell_invoke_webrequest_download.yml` — Suspicious Invoke-WebRequest Execution
+- `rules/windows/process_creation/proc_creation_win_powershell_kerberos_kerberos_ticket_request_via_cli.yml` — Suspicious Kerberos Ticket Request via CLI
+- `rules/windows/process_creation/proc_creation_win_powershell_mailboxexport_share.yml` — Suspicious PowerShell Mailbox Export to Share
+- `rules/windows/process_creation/proc_creation_win_powershell_malicious_cmdlets.yml` — Malicious PowerShell Commandlets - ProcessCreation
+- `rules/windows/process_creation/proc_creation_win_powershell_msexchange_transport_agent.yml` — MSExchange Transport Agent Installation
+- `rules/windows/process_creation/proc_creation_win_powershell_non_interactive_execution.yml` — Non Interactive PowerShell Process Spawned
+- `rules/windows/process_creation/proc_creation_win_powershell_obfuscation_via_utf8.yml` — Potential PowerShell Obfuscation Via WCHAR/CHAR
+- `rules/windows/process_creation/proc_creation_win_powershell_public_folder.yml` — Execution of Powershell Script in Public Folder
+- `rules/windows/process_creation/proc_creation_win_powershell_remotefxvgpudisablement_abuse.yml` — RemoteFXvGPUDisablement Abuse Via AtomicTestHarnesses
+- `rules/windows/process_creation/proc_creation_win_powershell_remove_mppreference.yml` — Tamper Windows Defender Remove-MpPreference
+- `rules/windows/process_creation/proc_creation_win_powershell_reverse_shell_connection.yml` — Potential Powershell ReverseShell Connection
+- `rules/windows/process_creation/proc_creation_win_powershell_run_script_from_ads.yml` — Run PowerShell Script from ADS
+- `rules/windows/process_creation/proc_creation_win_powershell_sam_access.yml` — PowerShell SAM Copy
+- `rules/windows/process_creation/proc_creation_win_powershell_script_engine_parent.yml` — Suspicious PowerShell Invocation From Script Engines
+- `rules/windows/process_creation/proc_creation_win_powershell_script_exec_from_temp_folder.yml` — Potentially Suspicious Powershell Script Execution From Temp Folder
+- `rules/windows/process_creation/proc_creation_win_powershell_service_dacl_modification_set_service.yml` — Suspicious Service DACL Modification Via Set-Service Cmdlet
+- `rules/windows/process_creation/proc_creation_win_powershell_set_acl.yml` — PowerShell Script Change Permission Via Set-Acl
+- `rules/windows/process_creation/proc_creation_win_powershell_set_acl_susp_location.yml` — PowerShell Set-Acl On Windows Folder
+- `rules/windows/process_creation/proc_creation_win_powershell_set_service_disabled.yml` — Service StartupType Change Via PowerShell Set-Service
+- `rules/windows/process_creation/proc_creation_win_powershell_shadowcopy_deletion.yml` — Deletion of Volume Shadow Copies via WMI with PowerShell
+- `rules/windows/process_creation/proc_creation_win_powershell_snapins_hafnium.yml` — Exchange PowerShell Snap-Ins Usage
+- `rules/windows/process_creation/proc_creation_win_powershell_stop_service.yml` — Stop Windows Service Via PowerShell Stop-Service
+- `rules/windows/process_creation/proc_creation_win_powershell_susp_download_patterns.yml` — Suspicious PowerShell Download and Execute Pattern
+- `rules/windows/process_creation/proc_creation_win_powershell_susp_parameter_variation.yml` — Suspicious PowerShell Parameter Substring
+- `rules/windows/process_creation/proc_creation_win_powershell_susp_parent_process.yml` — Suspicious PowerShell Parent Process
+- `rules/windows/process_creation/proc_creation_win_powershell_susp_ps_appdata.yml` — PowerShell Script Run in AppData
+- `rules/windows/process_creation/proc_creation_win_powershell_uninstall_defender_feature.yml` — Suspicious Uninstall of Windows Defender Feature via PowerShell
+- `rules/windows/process_creation/proc_creation_win_powershell_user_discovery_get_aduser.yml` — User Discovery And Export Via Get-ADUser Cmdlet
+- `rules/windows/process_creation/proc_creation_win_powershell_x509enrollment.yml` — Suspicious X509Enrollment - Process Creation
+- `rules/windows/process_creation/proc_creation_win_powershell_xor_commandline.yml` — Suspicious XOR Encoded PowerShell Command
+- `rules/windows/process_creation/proc_creation_win_powershell_zip_compress.yml` — Folder Compress To Potentially Suspicious Output Via Compress-Archive Cmdlet
+- `rules/windows/process_creation/proc_creation_win_presentationhost_download.yml` — Arbitrary File Download Via PresentationHost.EXE
+- `rules/windows/process_creation/proc_creation_win_presentationhost_uncommon_location_exec.yml` — XBAP Execution From Uncommon Locations Via PresentationHost.EXE
+- `rules/windows/process_creation/proc_creation_win_pressanykey_lolbin_execution.yml` — Visual Studio NodejsTools PressAnyKey Arbitrary Binary Execution
+- `rules/windows/process_creation/proc_creation_win_print_remote_file_copy.yml` — Abusing Print Executable
+- `rules/windows/process_creation/proc_creation_win_protocolhandler_download.yml` — File Download Using ProtocolHandler.exe
+- `rules/windows/process_creation/proc_creation_win_provlaunch_potential_abuse.yml` — Potential Provlaunch.EXE Binary Proxy Execution Abuse
+- `rules/windows/process_creation/proc_creation_win_provlaunch_susp_child_process.yml` — Suspicious Provlaunch.EXE Child Process
+- `rules/windows/process_creation/proc_creation_win_psr_capture_screenshots.yml` — Screen Capture Activity Via Psr.EXE
+- `rules/windows/process_creation/proc_creation_win_pua_3proxy_execution.yml` — PUA - 3Proxy Execution
+- `rules/windows/process_creation/proc_creation_win_pua_adfind_enumeration.yml` — PUA - Suspicious ActiveDirectory Enumeration Via AdFind.EXE
+- `rules/windows/process_creation/proc_creation_win_pua_adfind_execution.yml` — PUA - AdFind.EXE Execution
+- `rules/windows/process_creation/proc_creation_win_pua_adfind_susp_usage.yml` — PUA - AdFind Suspicious Execution
+- `rules/windows/process_creation/proc_creation_win_pua_advanced_ip_scanner.yml` — PUA - Advanced IP Scanner Execution
+- `rules/windows/process_creation/proc_creation_win_pua_advanced_port_scanner.yml` — PUA - Advanced Port Scanner Execution
+- `rules/windows/process_creation/proc_creation_win_pua_advancedrun.yml` — PUA - AdvancedRun Execution
+- `rules/windows/process_creation/proc_creation_win_pua_advancedrun_priv_user.yml` — PUA - AdvancedRun Suspicious Execution
+- `rules/windows/process_creation/proc_creation_win_pua_chisel.yml` — PUA - Chisel Tunneling Tool Execution
+- `rules/windows/process_creation/proc_creation_win_pua_cleanwipe.yml` — PUA - CleanWipe Execution
+- `rules/windows/process_creation/proc_creation_win_pua_crassus.yml` — PUA - Crassus Execution
+- `rules/windows/process_creation/proc_creation_win_pua_csexec.yml` — PUA - CsExec Execution
+- `rules/windows/process_creation/proc_creation_win_pua_defendercheck.yml` — PUA - DefenderCheck Execution
+- `rules/windows/process_creation/proc_creation_win_pua_ditsnap.yml` — PUA - DIT Snapshot Viewer
+- `rules/windows/process_creation/proc_creation_win_pua_frp.yml` — PUA - Fast Reverse Proxy (FRP) Execution
+- `rules/windows/process_creation/proc_creation_win_pua_iox.yml` — PUA- IOX Tunneling Tool Execution
+- `rules/windows/process_creation/proc_creation_win_pua_kdu_driver_tool.yml` — PUA - Kernel Driver Utility (KDU) Execution
+- `rules/windows/process_creation/proc_creation_win_pua_memprocfs.yml` — PUA - Memory Dump Mount Via MemProcFS
+- `rules/windows/process_creation/proc_creation_win_pua_mouselock_execution.yml` — PUA - Mouse Lock Execution
+- `rules/windows/process_creation/proc_creation_win_pua_netcat.yml` — PUA - Netcat Suspicious Execution
+- `rules/windows/process_creation/proc_creation_win_pua_netscan.yml` — PUA - SoftPerfect Netscan Execution
+- `rules/windows/process_creation/proc_creation_win_pua_ngrok.yml` — PUA - Ngrok Execution
+- `rules/windows/process_creation/proc_creation_win_pua_nimgrab.yml` — PUA - Nimgrab Execution
+- `rules/windows/process_creation/proc_creation_win_pua_nimscan.yml` — PUA - NimScan Execution
+- `rules/windows/process_creation/proc_creation_win_pua_nircmd.yml` — PUA - NirCmd Execution
+- `rules/windows/process_creation/proc_creation_win_pua_nircmd_as_system.yml` — PUA - NirCmd Execution As LOCAL SYSTEM
+- `rules/windows/process_creation/proc_creation_win_pua_nmap_zenmap.yml` — PUA - Nmap/Zenmap Execution
+- `rules/windows/process_creation/proc_creation_win_pua_nps.yml` — PUA - NPS Tunneling Tool Execution
+- `rules/windows/process_creation/proc_creation_win_pua_nsudo.yml` — PUA - NSudo Execution
+- `rules/windows/process_creation/proc_creation_win_pua_pingcastle.yml` — PUA - PingCastle Execution
+- `rules/windows/process_creation/proc_creation_win_pua_process_hacker.yml` — PUA - Process Hacker Execution
+- `rules/windows/process_creation/proc_creation_win_pua_radmin.yml` — PUA - Radmin Viewer Utility Execution
+- `rules/windows/process_creation/proc_creation_win_pua_rcedit_execution.yml` — PUA - Potential PE Metadata Tamper Using Rcedit
+- `rules/windows/process_creation/proc_creation_win_pua_rclone_execution.yml` — PUA - Rclone Execution
+- `rules/windows/process_creation/proc_creation_win_pua_restic.yml` — PUA - Restic Backup Tool Execution
+- `rules/windows/process_creation/proc_creation_win_pua_runxcmd.yml` — PUA - RunXCmd Execution
+- `rules/windows/process_creation/proc_creation_win_pua_seatbelt.yml` — PUA - Seatbelt Execution
+- `rules/windows/process_creation/proc_creation_win_pua_system_informer.yml` — PUA - System Informer Execution
+- `rules/windows/process_creation/proc_creation_win_pua_trufflehog.yml` — PUA - TruffleHog Execution
+- `rules/windows/process_creation/proc_creation_win_pua_webbrowserpassview.yml` — PUA - WebBrowserPassView Execution
+- `rules/windows/process_creation/proc_creation_win_pua_wsudo_susp_execution.yml` — PUA - Wsudo Suspicious Execution
+- `rules/windows/process_creation/proc_creation_win_python_adidnsdump.yml` — PUA - Adidnsdump Execution
+- `rules/windows/process_creation/proc_creation_win_python_base64_encoded_execution.yml` — Python One-Liners with Base64 Decoding
+- `rules/windows/process_creation/proc_creation_win_python_inline_command_execution.yml` — Python Inline Command Execution
+- `rules/windows/process_creation/proc_creation_win_python_pty_spawn.yml` — Python Spawning Pretty TTY on Windows
+- `rules/windows/process_creation/proc_creation_win_qemu_suspicious_execution.yml` — Potentially Suspicious Usage Of Qemu
+- `rules/windows/process_creation/proc_creation_win_query_session_exfil.yml` — Query Usage To Exfil Data
+- `rules/windows/process_creation/proc_creation_win_quickassist_execution.yml` — QuickAssist Execution
+- `rules/windows/process_creation/proc_creation_win_rar_compress_data.yml` — Files Added To An Archive Using Rar.EXE
+- `rules/windows/process_creation/proc_creation_win_rar_compression_with_password.yml` — Rar Usage with Password and Compression Level
+- `rules/windows/process_creation/proc_creation_win_rar_susp_greedy_compression.yml` — Suspicious Greedy Compression Using Rar.EXE
+- `rules/windows/process_creation/proc_creation_win_rasdial_execution.yml` — Suspicious RASdial Activity
+- `rules/windows/process_creation/proc_creation_win_rdp_enable_or_disable_via_win32_terminalservicesetting_wmi_class.yml` — RDP Enable or Disable via Win32_TerminalServiceSetting WMI Class
+- `rules/windows/process_creation/proc_creation_win_reg_add_run_key.yml` — Potential Persistence Attempt Via Run Keys Using Reg.EXE
+- `rules/windows/process_creation/proc_creation_win_reg_add_safeboot.yml` — Add SafeBoot Keys Via Reg Utility
+- `rules/windows/process_creation/proc_creation_win_reg_bitlocker.yml` — Suspicious Reg Add BitLocker
+- `rules/windows/process_creation/proc_creation_win_reg_credential_access_via_password_filter.yml` — Dropping Of Password Filter DLL
+- `rules/windows/process_creation/proc_creation_win_reg_defender_exclusion.yml` — Suspicious Windows Defender Folder Exclusion Added Via Reg.EXE
+- `rules/windows/process_creation/proc_creation_win_reg_delete_runmru.yml` — RunMRU Registry Key Deletion
+- `rules/windows/process_creation/proc_creation_win_reg_delete_safeboot.yml` — SafeBoot Registry Key Deleted Via Reg.EXE
+- `rules/windows/process_creation/proc_creation_win_reg_delete_services.yml` — Service Registry Key Deleted Via Reg.EXE
+- `rules/windows/process_creation/proc_creation_win_reg_desktop_background_change.yml` — Potentially Suspicious Desktop Background Change Using Reg.EXE
+- `rules/windows/process_creation/proc_creation_win_reg_direct_asep_registry_keys_modification.yml` — Direct Autorun Keys Modification
+- `rules/windows/process_creation/proc_creation_win_reg_disable_defender_wmi_autologger.yml` — Disabling Windows Defender WMI Autologger Session via Reg.exe
+- `rules/windows/process_creation/proc_creation_win_reg_disable_sec_services.yml` — Security Service Disabled Via Reg.EXE
+- `rules/windows/process_creation/proc_creation_win_reg_dumping_sensitive_hives.yml` — Dumping of Sensitive Hives Via Reg.EXE
+- `rules/windows/process_creation/proc_creation_win_reg_enable_windows_recall.yml` — Windows Recall Feature Enabled Via Reg.EXE
+- `rules/windows/process_creation/proc_creation_win_reg_enumeration_for_credentials_in_registry.yml` — Enumeration for Credentials in Registry
+- `rules/windows/process_creation/proc_creation_win_reg_import_from_suspicious_paths.yml` — Potential Suspicious Registry File Imported Via Reg.EXE
+- `rules/windows/process_creation/proc_creation_win_reg_lsa_disable_restricted_admin.yml` — RestrictedAdminMode Registry Value Tampering - ProcCreation
+- `rules/windows/process_creation/proc_creation_win_reg_machineguid.yml` — Suspicious Query of MachineGUID
+- `rules/windows/process_creation/proc_creation_win_reg_modify_group_policy_settings.yml` — Modify Group Policy Settings
+- `rules/windows/process_creation/proc_creation_win_reg_nolmhash.yml` — Enable LM Hash Storage - ProcCreation
+- `rules/windows/process_creation/proc_creation_win_reg_query_registry.yml` — Potential Configuration And Service Reconnaissance Via Reg.EXE
+- `rules/windows/process_creation/proc_creation_win_reg_rdp_keys_tamper.yml` — Potential Tampering With RDP Related Registry Keys Via Reg.EXE
+- `rules/windows/process_creation/proc_creation_win_reg_screensaver.yml` — Suspicious ScreenSave Change by Reg.exe
+- `rules/windows/process_creation/proc_creation_win_reg_software_discovery.yml` — Detected Windows Software Discovery
+- `rules/windows/process_creation/proc_creation_win_reg_susp_paths.yml` — Reg Add Suspicious Paths
+- `rules/windows/process_creation/proc_creation_win_reg_system_language_discovery.yml` — System Language Discovery via Reg.Exe
+- `rules/windows/process_creation/proc_creation_win_reg_system_restore_modification.yml` — System Restore Registry Modification via CommandLine
+- `rules/windows/process_creation/proc_creation_win_reg_volsnap_disable.yml` — Disabled Volume Snapshots
+- `rules/windows/process_creation/proc_creation_win_reg_windows_defender_tamper.yml` — Suspicious Windows Defender Registry Key Tampering Via Reg.EXE
+- `rules/windows/process_creation/proc_creation_win_reg_write_protect_for_storage_disabled.yml` — Write Protect For Storage Disabled
+- `rules/windows/process_creation/proc_creation_win_regasm_no_flag_or_dll_execution.yml` — RegAsm.EXE Execution Without CommandLine Flags or Files
+- `rules/windows/process_creation/proc_creation_win_regasm_regsvcs_uncommon_extension_execution.yml` — Potentially Suspicious Execution Of Regasm/Regsvcs With Uncommon Extension
+- `rules/windows/process_creation/proc_creation_win_regasm_regsvcs_uncommon_location_execution.yml` — Potentially Suspicious Execution Of Regasm/Regsvcs From Uncommon Location
+- `rules/windows/process_creation/proc_creation_win_regedit_trustedinstaller.yml` — Regedit as Trusted Installer
+- `rules/windows/process_creation/proc_creation_win_registry_cimprovider_dll_load.yml` — DLL Execution Via Register-cimprovider.exe
+- `rules/windows/process_creation/proc_creation_win_registry_enumeration_for_credentials_cli.yml` — Enumeration for 3rd Party Creds From CLI
+- `rules/windows/process_creation/proc_creation_win_registry_export_of_thirdparty_creds.yml` — Registry Export of Third-Party Credentials
+- `rules/windows/process_creation/proc_creation_win_registry_ie_security_zone_protocol_defaults_downgrade.yml` — IE ZoneMap Setting Downgraded To MyComputer Zone For HTTP Protocols Via CLI
+- `rules/windows/process_creation/proc_creation_win_registry_install_reg_debugger_backdoor.yml` — Suspicious Debugger Registration Cmdline
+- `rules/windows/process_creation/proc_creation_win_registry_logon_script.yml` — Potential Persistence Via Logon Scripts - CommandLine
+- `rules/windows/process_creation/proc_creation_win_registry_new_network_provider.yml` — Potential Credential Dumping Attempt Using New NetworkProvider - CLI
+- `rules/windows/process_creation/proc_creation_win_registry_office_disable_python_security_warnings.yml` — Python Function Execution Security Warning Disabled In Excel
+- `rules/windows/process_creation/proc_creation_win_registry_privilege_escalation_via_service_key.yml` — Potential Privilege Escalation via Service Permissions Weakness
+- `rules/windows/process_creation/proc_creation_win_registry_provlaunch_provisioning_command.yml` — Potential Provisioning Registry Key Abuse For Binary Proxy Execution
+- `rules/windows/process_creation/proc_creation_win_registry_set_unsecure_powershell_policy.yml` — Potential PowerShell Execution Policy Tampering - ProcCreation
+- `rules/windows/process_creation/proc_creation_win_registry_special_accounts_hide_user.yml` — Hiding User Account Via SpecialAccounts Registry Key - CommandLine
+- `rules/windows/process_creation/proc_creation_win_registry_typed_paths_persistence.yml` — Persistence Via TypedPaths - CommandLine
+- `rules/windows/process_creation/proc_creation_win_regsvr32_http_ip_pattern.yml` — Potentially Suspicious Regsvr32 HTTP IP Pattern
+- `rules/windows/process_creation/proc_creation_win_regsvr32_network_pattern.yml` — Potentially Suspicious Regsvr32 HTTP/FTP Pattern
+- `rules/windows/process_creation/proc_creation_win_regsvr32_remote_share.yml` — Suspicious Regsvr32 Execution From Remote Share
+- `rules/windows/process_creation/proc_creation_win_regsvr32_susp_child_process.yml` — Potentially Suspicious Child Process Of Regsvr32
+- `rules/windows/process_creation/proc_creation_win_regsvr32_susp_exec_path_1.yml` — Regsvr32 Execution From Potential Suspicious Location
+- `rules/windows/process_creation/proc_creation_win_regsvr32_susp_extensions.yml` — Regsvr32 DLL Execution With Suspicious File Extension
+- `rules/windows/process_creation/proc_creation_win_regsvr32_susp_parent.yml` — Scripting/CommandLine Process Spawned Regsvr32
+- `rules/windows/process_creation/proc_creation_win_remote_access_tools_anydesk.yml` — Remote Access Tool - AnyDesk Execution
+- `rules/windows/process_creation/proc_creation_win_remote_access_tools_anydesk_piped_password_via_cli.yml` — Remote Access Tool - AnyDesk Piped Password Via CLI
+- `rules/windows/process_creation/proc_creation_win_remote_access_tools_anydesk_revoked_cert.yml` — Remote Access Tool - AnyDesk Execution With Known Revoked Signing Certificate
+- `rules/windows/process_creation/proc_creation_win_remote_access_tools_anydesk_silent_install.yml` — Remote Access Tool - AnyDesk Silent Installation
+- `rules/windows/process_creation/proc_creation_win_remote_access_tools_anydesk_susp_exec.yml` — Remote Access Tool - Anydesk Execution From Suspicious Folder
+- `rules/windows/process_creation/proc_creation_win_remote_access_tools_gotoopener.yml` — Remote Access Tool - GoToAssist Execution
+- `rules/windows/process_creation/proc_creation_win_remote_access_tools_logmein.yml` — Remote Access Tool - LogMeIn Execution
+- `rules/windows/process_creation/proc_creation_win_remote_access_tools_meshagent_arguments.yml` — Remote Access Tool - Potential MeshAgent Execution - Windows
+- `rules/windows/process_creation/proc_creation_win_remote_access_tools_meshagent_exec.yml` — Remote Access Tool - MeshAgent Command Execution via MeshCentral
+- `rules/windows/process_creation/proc_creation_win_remote_access_tools_netsupport.yml` — Remote Access Tool - NetSupport Execution
+- `rules/windows/process_creation/proc_creation_win_remote_access_tools_netsupport_susp_exec.yml` — Remote Access Tool - NetSupport Execution From Unusual Location
+- `rules/windows/process_creation/proc_creation_win_remote_access_tools_renamed_meshagent_execution.yml` — Remote Access Tool - Renamed MeshAgent Execution - Windows
+- `rules/windows/process_creation/proc_creation_win_remote_access_tools_rurat_non_default_location.yml` — Remote Access Tool - RURAT Execution From Unusual Location
+- `rules/windows/process_creation/proc_creation_win_remote_access_tools_screenconnect.yml` — Remote Access Tool - ScreenConnect Execution
+- `rules/windows/process_creation/proc_creation_win_remote_access_tools_screenconnect_installation_cli_param.yml` — Remote Access Tool - ScreenConnect Installation Execution
+- `rules/windows/process_creation/proc_creation_win_remote_access_tools_screenconnect_remote_execution.yml` — Remote Access Tool - ScreenConnect Remote Command Execution
+- `rules/windows/process_creation/proc_creation_win_remote_access_tools_screenconnect_remote_execution_susp.yml` — Remote Access Tool - ScreenConnect Potential Suspicious Remote Command Execution
+- `rules/windows/process_creation/proc_creation_win_remote_access_tools_screenconnect_webshell.yml` — Remote Access Tool - ScreenConnect Server Web Shell Execution
+- `rules/windows/process_creation/proc_creation_win_remote_access_tools_simple_help.yml` — Remote Access Tool - Simple Help Execution
+- `rules/windows/process_creation/proc_creation_win_remote_access_tools_tacticalrmm_agent_registration_via_cli.yml` — Remote Access Tool - TacticalRMM Agent Registration to Potentially Attacker-Controlled Server
+- `rules/windows/process_creation/proc_creation_win_remote_access_tools_teamviewer_incoming_connection.yml` — Remote Access Tool - Team Viewer Session Started On Windows Host
+- `rules/windows/process_creation/proc_creation_win_remote_access_tools_ultraviewer.yml` — Remote Access Tool - UltraViewer Execution
+- `rules/windows/process_creation/proc_creation_win_remote_time_discovery.yml` — Discovery of a System Time
+- `rules/windows/process_creation/proc_creation_win_renamed_adfind.yml` — Renamed AdFind Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_autohotkey.yml` — Renamed AutoHotkey.EXE Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_autoit.yml` — Renamed AutoIt Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_binary.yml` — Potential Defense Evasion Via Binary Rename
+- `rules/windows/process_creation/proc_creation_win_renamed_binary_highly_relevant.yml` — Potential Defense Evasion Via Rename Of Highly Relevant Binaries
+- `rules/windows/process_creation/proc_creation_win_renamed_boinc.yml` — Renamed BOINC Client Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_browsercore.yml` — Renamed BrowserCore.EXE Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_cloudflared.yml` — Renamed Cloudflared.EXE Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_createdump.yml` — Renamed CreateDump Utility Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_curl.yml` — Renamed CURL.EXE Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_dctask64.yml` — Renamed ZOHO Dctask64 Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_ftp.yml` — Renamed FTP.EXE Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_gpg4win.yml` — Renamed Gpg.EXE Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_jusched.yml` — Renamed Jusched.EXE Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_mavinject.yml` — Renamed Mavinject.EXE Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_megasync.yml` — Renamed MegaSync Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_msdt.yml` — Renamed Msdt.EXE Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_msteams.yml` — Renamed Microsoft Teams Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_netsupport_rat.yml` — Renamed NetSupport RAT Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_nircmd.yml` — Renamed NirCmd.EXE Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_office_processes.yml` — Renamed Office Binary Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_paexec.yml` — Renamed PAExec Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_pingcastle.yml` — Renamed PingCastle Binary Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_plink.yml` — Renamed Plink Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_pressanykey.yml` — Visual Studio NodejsTools PressAnyKey Renamed Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_rundll32_dllregisterserver.yml` — Potential Renamed Rundll32 Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_rurat.yml` — Renamed Remote Utilities RAT (RURAT) Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_sysinternals_debugview.yml` — Renamed SysInternals DebugView Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_sysinternals_psexec_service.yml` — Renamed PsExec Service Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_sysinternals_sdelete.yml` — Renamed Sysinternals Sdelete Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_vmnat.yml` — Renamed Vmnat.exe Execution
+- `rules/windows/process_creation/proc_creation_win_renamed_whoami.yml` — Renamed Whoami Execution
+- `rules/windows/process_creation/proc_creation_win_ruby_inline_command_execution.yml` — Ruby Inline Command Execution
+- `rules/windows/process_creation/proc_creation_win_rundll32_advpack_obfuscated_ordinal_call.yml` — Suspicious Advpack Call Via Rundll32.EXE
+- `rules/windows/process_creation/proc_creation_win_rundll32_inline_vbs.yml` — Suspicious Rundll32 Invoking Inline VBScript
+- `rules/windows/process_creation/proc_creation_win_rundll32_installscreensaver.yml` — Rundll32 InstallScreenSaver Execution
+- `rules/windows/process_creation/proc_creation_win_rundll32_keymgr.yml` — Suspicious Key Manager Access
+- `rules/windows/process_creation/proc_creation_win_rundll32_mshtml_runhtmlapplication.yml` — Mshtml.DLL RunHTMLApplication Suspicious Usage
+- `rules/windows/process_creation/proc_creation_win_rundll32_no_params.yml` — Rundll32 Execution Without CommandLine Parameters
+- `rules/windows/process_creation/proc_creation_win_rundll32_ntlmrelay.yml` — Suspicious NTLM Authentication on the Printer Spooler Service
+- `rules/windows/process_creation/proc_creation_win_rundll32_obfuscated_ordinal_call.yml` — Potential Obfuscated Ordinal Call Via Rundll32
+- `rules/windows/process_creation/proc_creation_win_rundll32_parent_explorer.yml` — Rundll32 Spawned Via Explorer.EXE
+- `rules/windows/process_creation/proc_creation_win_rundll32_process_dump_via_comsvcs.yml` — Process Memory Dump Via Comsvcs.DLL
+- `rules/windows/process_creation/proc_creation_win_rundll32_registered_com_objects.yml` — Rundll32 Registered COM Objects
+- `rules/windows/process_creation/proc_creation_win_rundll32_run_locations.yml` — Suspicious Process Start Locations
+- `rules/windows/process_creation/proc_creation_win_rundll32_setupapi_installhinfsection.yml` — Suspicious Rundll32 Setupapi.dll Activity
+- `rules/windows/process_creation/proc_creation_win_rundll32_shell32_susp_execution.yml` — Shell32 DLL Execution in Suspicious Directory
+- `rules/windows/process_creation/proc_creation_win_rundll32_shelldispatch_potential_abuse.yml` — Potential ShellDispatch.DLL Functionality Abuse
+- `rules/windows/process_creation/proc_creation_win_rundll32_spawn_explorer.yml` — RunDLL32 Spawning Explorer
+- `rules/windows/process_creation/proc_creation_win_rundll32_susp_activity.yml` — Potentially Suspicious Rundll32 Activity
+- `rules/windows/process_creation/proc_creation_win_rundll32_susp_control_dll_load.yml` — Suspicious Control Panel DLL Load
+- `rules/windows/process_creation/proc_creation_win_rundll32_susp_execution_with_image_extension.yml` — Suspicious Rundll32 Execution With Image Extension
+- `rules/windows/process_creation/proc_creation_win_rundll32_susp_shellexec_execution.yml` — Suspicious Usage Of ShellExec_RunDLL
+- `rules/windows/process_creation/proc_creation_win_rundll32_susp_shellexec_ordinal_execution.yml` — Suspicious ShellExec_RunDLL Call Via Ordinal
+- `rules/windows/process_creation/proc_creation_win_rundll32_susp_shimcache_flush.yml` — ShimCache Flush
+- `rules/windows/process_creation/proc_creation_win_rundll32_sys.yml` — Suspicious Rundll32 Activity Invoking Sys File
+- `rules/windows/process_creation/proc_creation_win_rundll32_udl_exec.yml` — Potentially Suspicious Rundll32.EXE Execution of UDL File
+- `rules/windows/process_creation/proc_creation_win_rundll32_unc_path.yml` — Rundll32 UNC Path Execution
+- `rules/windows/process_creation/proc_creation_win_rundll32_user32_dll.yml` — Suspicious Workstation Locking via Rundll32
+- `rules/windows/process_creation/proc_creation_win_rundll32_webdav_client_execution.yml` — WebDav Client Execution Via Rundll32.EXE
+- `rules/windows/process_creation/proc_creation_win_rundll32_without_parameters.yml` — Rundll32 Execution Without Parameters
+- `rules/windows/process_creation/proc_creation_win_runonce_execution.yml` — Run Once Task Execution as Configured in Registry
+- `rules/windows/process_creation/proc_creation_win_sc_change_sevice_image_path_by_non_admin.yml` — Possible Privilege Escalation via Weak Service Permissions
+- `rules/windows/process_creation/proc_creation_win_sc_create_service.yml` — New Service Creation Using Sc.EXE
+- `rules/windows/process_creation/proc_creation_win_sc_disable_service.yml` — Service StartupType Change Via Sc.EXE
+- `rules/windows/process_creation/proc_creation_win_sc_new_kernel_driver.yml` — New Kernel Driver Via SC.EXE
+- `rules/windows/process_creation/proc_creation_win_sc_query_interesting_services.yml` — Interesting Service Enumeration Via Sc.EXE
+- `rules/windows/process_creation/proc_creation_win_sc_sdset_allow_service_changes.yml` — Allow Service Access Using Security Descriptor Tampering Via Sc.EXE
+- `rules/windows/process_creation/proc_creation_win_sc_sdset_deny_service_access.yml` — Deny Service Access Using Security Descriptor Tampering Via Sc.EXE
+- `rules/windows/process_creation/proc_creation_win_sc_sdset_hide_sevices.yml` — Service DACL Abuse To Hide Services Via Sc.EXE
+- `rules/windows/process_creation/proc_creation_win_sc_sdset_modification.yml` — Service Security Descriptor Tampering Via Sc.EXE
+- `rules/windows/process_creation/proc_creation_win_sc_service_path_modification.yml` — Suspicious Service Path Modification
+- `rules/windows/process_creation/proc_creation_win_sc_service_tamper_for_persistence.yml` — Potential Persistence Attempt Via Existing Service Tampering
+- `rules/windows/process_creation/proc_creation_win_sc_stop_service.yml` — Stop Windows Service Via Sc.EXE
+- `rules/windows/process_creation/proc_creation_win_schtasks_appdata_local_system.yml` — Suspicious Schtasks Execution AppData Folder
+- `rules/windows/process_creation/proc_creation_win_schtasks_change.yml` — Suspicious Modification Of Scheduled Tasks
+- `rules/windows/process_creation/proc_creation_win_schtasks_creation.yml` — Scheduled Task Creation Via Schtasks.EXE
+- `rules/windows/process_creation/proc_creation_win_schtasks_creation_temp_folder.yml` — Suspicious Scheduled Task Creation Involving Temp Folder
+- `rules/windows/process_creation/proc_creation_win_schtasks_delete_all.yml` — Delete All Scheduled Tasks
+- `rules/windows/process_creation/proc_creation_win_schtasks_folder_combos.yml` — Schtasks From Suspicious Folders
+- `rules/windows/process_creation/proc_creation_win_schtasks_guid_task_name.yml` — Suspicious Scheduled Task Name As GUID
+- `rules/windows/process_creation/proc_creation_win_schtasks_one_time_only_midnight_task.yml` — Uncommon One Time Only Scheduled Task At 00:00
+- `rules/windows/process_creation/proc_creation_win_schtasks_openssh_tunnelling.yml` — Potential SSH Tunnel Persistence Install Using A Scheduled Task
+- `rules/windows/process_creation/proc_creation_win_schtasks_persistence_windows_telemetry.yml` — Potential Persistence Via Microsoft Compatibility Appraiser
+- `rules/windows/process_creation/proc_creation_win_schtasks_powershell_persistence.yml` — Potential Persistence Via Powershell Search Order Hijacking - Task
+- `rules/windows/process_creation/proc_creation_win_schtasks_reg_loader.yml` — Scheduled Task Executing Payload from Registry
+- `rules/windows/process_creation/proc_creation_win_schtasks_reg_loader_encoded.yml` — Scheduled Task Executing Encoded Payload from Registry
+- `rules/windows/process_creation/proc_creation_win_schtasks_schedule_type.yml` — Suspicious Schtasks Schedule Types
+- `rules/windows/process_creation/proc_creation_win_schtasks_schedule_type_system.yml` — Suspicious Schtasks Schedule Type With High Privileges
+- `rules/windows/process_creation/proc_creation_win_schtasks_schedule_via_masqueraded_xml_file.yml` — Suspicious Scheduled Task Creation via Masqueraded XML File
+- `rules/windows/process_creation/proc_creation_win_schtasks_susp_pattern.yml` — Suspicious Command Patterns In Scheduled Task Creation
+- `rules/windows/process_creation/proc_creation_win_schtasks_system.yml` — Schtasks Creation Or Modification With SYSTEM Privileges
+- `rules/windows/process_creation/proc_creation_win_scrcons_susp_child_process.yml` — Script Event Consumer Spawning Process
+- `rules/windows/process_creation/proc_creation_win_sdbinst_shim_persistence.yml` — Potential Shim Database Persistence via Sdbinst.EXE
+- `rules/windows/process_creation/proc_creation_win_sdclt_child_process.yml` — Sdclt Child Processes
+- `rules/windows/process_creation/proc_creation_win_sdiagnhost_susp_child.yml` — Sdiagnhost Calling Suspicious Child Process
+- `rules/windows/process_creation/proc_creation_win_secedit_execution.yml` — Potential Suspicious Activity Using SeCEdit
+- `rules/windows/process_creation/proc_creation_win_security_susp_node_js_execution.yml` — NodeJS Execution of JavaScript File
+- `rules/windows/process_creation/proc_creation_win_servu_susp_child_process.yml` — Suspicious Serv-U Process Pattern
+- `rules/windows/process_creation/proc_creation_win_setres_uncommon_child_process.yml` — Uncommon Child Process Of Setres.EXE
+- `rules/windows/process_creation/proc_creation_win_setspn_spn_enumeration.yml` — Potential SPN Enumeration Via Setspn.EXE
+- `rules/windows/process_creation/proc_creation_win_setup16_custom_lst_execution.yml` — Setup16.EXE Execution With Custom .Lst File
+- `rules/windows/process_creation/proc_creation_win_sftp_proxy_command_execution.yml` — Indirect Command Execution via SFTP ProxyCommand
+- `rules/windows/process_creation/proc_creation_win_shutdown_execution.yml` — Suspicious Execution of Shutdown
+- `rules/windows/process_creation/proc_creation_win_shutdown_logoff.yml` — Suspicious Execution of Shutdown to Log Out
+- `rules/windows/process_creation/proc_creation_win_sigverif_uncommon_child_process.yml` — Uncommon Sigverif.EXE Child Process
+- `rules/windows/process_creation/proc_creation_win_sndvol_susp_child_processes.yml` — Uncommon Child Processes Of SndVol.exe
+- `rules/windows/process_creation/proc_creation_win_soundrecorder_audio_capture.yml` — Audio Capture via SoundRecorder
+- `rules/windows/process_creation/proc_creation_win_speechruntime_child_process.yml` — Suspicious Speech Runtime Binary Child Process
+- `rules/windows/process_creation/proc_creation_win_splwow64_cli_anomaly.yml` — Suspicious Splwow64 Without Params
+- `rules/windows/process_creation/proc_creation_win_spoolsv_susp_child_processes.yml` — Suspicious Spool Service Child Process
+- `rules/windows/process_creation/proc_creation_win_sqlcmd_veeam_db_recon.yml` — Veeam Backup Database Suspicious Query
+- `rules/windows/process_creation/proc_creation_win_sqlcmd_veeam_dump.yml` — VeeamBackup Database Credentials Dump Via Sqlcmd.EXE
+- `rules/windows/process_creation/proc_creation_win_sqlite_chromium_profile_data.yml` — SQLite Chromium Profile Data DB Access
+- `rules/windows/process_creation/proc_creation_win_sqlite_firefox_gecko_profile_data.yml` — SQLite Firefox Profile Data DB Access
+- `rules/windows/process_creation/proc_creation_win_squirrel_download.yml` — Arbitrary File Download Via Squirrel.EXE
+- `rules/windows/process_creation/proc_creation_win_squirrel_proxy_execution.yml` — Process Proxy Execution Via Squirrel.EXE
+- `rules/windows/process_creation/proc_creation_win_ssh_proxy_execution.yml` — Program Executed Using Proxy/Local Command Via SSH.EXE
+- `rules/windows/process_creation/proc_creation_win_ssh_rdp_tunneling.yml` — Potential RDP Tunneling Via SSH
+- `rules/windows/process_creation/proc_creation_win_ssm_agent_abuse.yml` — Potential Amazon SSM Agent Hijacking
+- `rules/windows/process_creation/proc_creation_win_stordiag_susp_child_process.yml` — Execution via stordiag.exe
+- `rules/windows/process_creation/proc_creation_win_susp_16bit_application.yml` — Start of NT Virtual DOS Machine
+- `rules/windows/process_creation/proc_creation_win_susp_abusing_debug_privilege.yml` — Abused Debug Privilege by Arbitrary Parent Processes
+- `rules/windows/process_creation/proc_creation_win_susp_add_user_local_admin_group.yml` — User Added to Local Administrators Group
+- `rules/windows/process_creation/proc_creation_win_susp_add_user_privileged_group.yml` — User Added To Highly Privileged Group
+- `rules/windows/process_creation/proc_creation_win_susp_add_user_remote_desktop_group.yml` — User Added to Remote Desktop Users Group
+- `rules/windows/process_creation/proc_creation_win_susp_alternate_data_streams.yml` — Execute From Alternate Data Streams
+- `rules/windows/process_creation/proc_creation_win_susp_always_install_elevated_windows_installer.yml` — Always Install Elevated Windows Installer
+- `rules/windows/process_creation/proc_creation_win_susp_appx_execution.yml` — Potentially Suspicious Windows App Activity
+- `rules/windows/process_creation/proc_creation_win_susp_arbitrary_shell_execution_via_settingcontent.yml` — Arbitrary Shell Command Execution Via Settingcontent-Ms
+- `rules/windows/process_creation/proc_creation_win_susp_archiver_iso_phishing.yml` — Phishing Pattern ISO in Archive
+- `rules/windows/process_creation/proc_creation_win_susp_automated_collection.yml` — Automated Collection Command Prompt
+- `rules/windows/process_creation/proc_creation_win_susp_bad_opsec_sacrificial_processes.yml` — Bad Opsec Defaults Sacrificial Processes With Improper Arguments
+- `rules/windows/process_creation/proc_creation_win_susp_browser_launch_from_document_reader_process.yml` — Potential Suspicious Browser Launch From Document Reader Process
+- `rules/windows/process_creation/proc_creation_win_susp_child_process_as_system_.yml` — Suspicious Child Process Created as System
+- `rules/windows/process_creation/proc_creation_win_susp_cli_obfuscation_escape_char.yml` — Potential Commandline Obfuscation Using Escape Characters
+- `rules/windows/process_creation/proc_creation_win_susp_cli_obfuscation_unicode_img.yml` — Potential CommandLine Obfuscation Using Unicode Characters From Suspicious Image
+- `rules/windows/process_creation/proc_creation_win_susp_clickfix_filefix_execution.yml` — Suspicious ClickFix/FileFix Execution Pattern
+- `rules/windows/process_creation/proc_creation_win_susp_clickfix_filefix_whitespace_padding.yml` — Suspicious Explorer Process with Whitespace Padding - ClickFix/FileFix
+- `rules/windows/process_creation/proc_creation_win_susp_cmd_for_loop_execution_with_recursive_directory_search.yml` — Suspicious Usage of For Loop with Recursive Directory Search in CMD
+- `rules/windows/process_creation/proc_creation_win_susp_commandline_path_traversal_evasion.yml` — Potential Command Line Path Traversal Evasion Attempt
+- `rules/windows/process_creation/proc_creation_win_susp_copy_browser_data.yml` — Potential Browser Data Stealing
+- `rules/windows/process_creation/proc_creation_win_susp_copy_lateral_movement.yml` — Copy From Or To Admin Share Or Sysvol Folder
+- `rules/windows/process_creation/proc_creation_win_susp_copy_system_dir_lolbin.yml` — LOL-Binary Copied From System Directory
+- `rules/windows/process_creation/proc_creation_win_susp_crypto_mining_monero.yml` — Potential Crypto Mining Activity
+- `rules/windows/process_creation/proc_creation_win_susp_disable_raccine.yml` — Raccine Uninstall
+- `rules/windows/process_creation/proc_creation_win_susp_double_extension_parent.yml` — Suspicious Parent Double Extension File Execution
+- `rules/windows/process_creation/proc_creation_win_susp_download_office_domain.yml` — Suspicious Download from Office Domain
+- `rules/windows/process_creation/proc_creation_win_susp_dumpstack_log_evasion.yml` — DumpStack.log Defender Evasion
+- `rules/windows/process_creation/proc_creation_win_susp_elavated_msi_spawned_shell.yml` — Always Install Elevated MSI Spawned Cmd And Powershell
+- `rules/windows/process_creation/proc_creation_win_susp_electron_app_children.yml` — Suspicious Electron Application Child Processes
+- `rules/windows/process_creation/proc_creation_win_susp_electron_execution_proxy.yml` — Potentially Suspicious Electron Application CommandLine
+- `rules/windows/process_creation/proc_creation_win_susp_embed_exe_lnk.yml` — Hidden Powershell in Link File Pattern
+- `rules/windows/process_creation/proc_creation_win_susp_emoji_usage_in_cli_1.yml` — Potential Defense Evasion Activity Via Emoji Usage In CommandLine - 1
+- `rules/windows/process_creation/proc_creation_win_susp_emoji_usage_in_cli_2.yml` — Potential Defense Evasion Activity Via Emoji Usage In CommandLine - 2
+- `rules/windows/process_creation/proc_creation_win_susp_emoji_usage_in_cli_3.yml` — Potential Defense Evasion Activity Via Emoji Usage In CommandLine - 3
+- `rules/windows/process_creation/proc_creation_win_susp_emoji_usage_in_cli_4.yml` — Potential Defense Evasion Activity Via Emoji Usage In CommandLine - 4
+- `rules/windows/process_creation/proc_creation_win_susp_etw_modification_cmdline.yml` — ETW Logging Tamper In .NET Processes Via CommandLine
+- `rules/windows/process_creation/proc_creation_win_susp_etw_trace_evasion.yml` — ETW Trace Evasion Activity
+- `rules/windows/process_creation/proc_creation_win_susp_eventlog_clear.yml` — Suspicious Eventlog Clearing or Configuration Change Activity
+- `rules/windows/process_creation/proc_creation_win_susp_eventlog_content_recon.yml` — Potentially Suspicious EventLog Recon Activity Using Log Query Utilities
+- `rules/windows/process_creation/proc_creation_win_susp_execution_from_public_folder_as_parent.yml` — Potentially Suspicious Execution From Parent Process In Public Folder
+- `rules/windows/process_creation/proc_creation_win_susp_execution_path.yml` — Process Execution From A Potentially Suspicious Folder
+- `rules/windows/process_creation/proc_creation_win_susp_file_characteristics.yml` — Suspicious File Characteristics Due to Missing Fields
+- `rules/windows/process_creation/proc_creation_win_susp_filefix_execution_pattern.yml` — Suspicious FileFix Execution Pattern
+- `rules/windows/process_creation/proc_creation_win_susp_gather_network_info_execution.yml` — Suspicious Reconnaissance Activity Via GatherNetworkInfo.VBS
+- `rules/windows/process_creation/proc_creation_win_susp_hidden_dir_index_allocation.yml` — Potential Hidden Directory Creation Via NTFS INDEX_ALLOCATION Stream - CLI
+- `rules/windows/process_creation/proc_creation_win_susp_hiding_malware_in_fonts_folder.yml` — Writing Of Malicious Files To The Fonts Folder
+- `rules/windows/process_creation/proc_creation_win_susp_homoglyph_cyrillic_lookalikes.yml` — Potential Homoglyph Attack Using Lookalike Characters
+- `rules/windows/process_creation/proc_creation_win_susp_inline_base64_mz_header.yml` — Base64 MZ Header In CommandLine
+- `rules/windows/process_creation/proc_creation_win_susp_inline_node_js_execution.yml` — Potentially Suspicious Inline JavaScript Execution via NodeJS Binary
+- `rules/windows/process_creation/proc_creation_win_susp_jwt_token_search.yml` — Potentially Suspicious JWT Token Search Via CLI
+- `rules/windows/process_creation/proc_creation_win_susp_local_system_owner_account_discovery.yml` — Local Accounts Discovery
+- `rules/windows/process_creation/proc_creation_win_susp_lsass_dmp_cli_keywords.yml` — LSASS Dump Keyword In CommandLine
+- `rules/windows/process_creation/proc_creation_win_susp_ms_appinstaller_download.yml` — Potential File Download Via MS-AppInstaller Protocol Handler
+- `rules/windows/process_creation/proc_creation_win_susp_network_scan_loop.yml` — Suspicious Scan Loop Network
+- `rules/windows/process_creation/proc_creation_win_susp_network_sniffing.yml` — Potential Network Sniffing Activity Using Network Tools
+- `rules/windows/process_creation/proc_creation_win_susp_no_image_name.yml` — Process Launched Without Image Name
+- `rules/windows/process_creation/proc_creation_win_susp_non_priv_reg_or_ps.yml` — Non-privileged Usage of Reg or Powershell
+- `rules/windows/process_creation/proc_creation_win_susp_ntds.yml` — Suspicious Process Patterns NTDS.DIT Exfil
+- `rules/windows/process_creation/proc_creation_win_susp_nteventlogfile_usage.yml` — Potentially Suspicious Call To Win32_NTEventlogFile Class
+- `rules/windows/process_creation/proc_creation_win_susp_ntfs_short_name_path_use_image.yml` — Use Short Name Path in Image
+- `rules/windows/process_creation/proc_creation_win_susp_ntfs_short_name_use_cli.yml` — Use NTFS Short Name in Command Line
+- `rules/windows/process_creation/proc_creation_win_susp_ntfs_short_name_use_image.yml` — Use NTFS Short Name in Image
+- `rules/windows/process_creation/proc_creation_win_susp_powershell_execution_via_dll.yml` — Potential PowerShell Execution Via DLL
+- `rules/windows/process_creation/proc_creation_win_susp_priv_escalation_via_named_pipe.yml` — Privilege Escalation via Named Pipe Impersonation
+- `rules/windows/process_creation/proc_creation_win_susp_private_keys_recon.yml` — Private Keys Reconnaissance Via CommandLine Tools
+- `rules/windows/process_creation/proc_creation_win_susp_privilege_escalation_cli_patterns.yml` — Suspicious RunAs-Like Flag Combination
+- `rules/windows/process_creation/proc_creation_win_susp_progname.yml` — Suspicious Program Names
+- `rules/windows/process_creation/proc_creation_win_susp_recon.yml` — Recon Information for Export with Command Prompt
+- `rules/windows/process_creation/proc_creation_win_susp_recycle_bin_fake_execution.yml` — Suspicious Process Execution From Fake Recycle.Bin Folder
+- `rules/windows/process_creation/proc_creation_win_susp_redirect_local_admin_share.yml` — Suspicious Redirection to Local Admin Share
+- `rules/windows/process_creation/proc_creation_win_susp_registry_modification_of_ms_setting_protocol_handler.yml` — Registry Modification of MS-settings Protocol Handler
+- `rules/windows/process_creation/proc_creation_win_susp_remote_desktop_tunneling.yml` — Potential Remote Desktop Tunneling
+- `rules/windows/process_creation/proc_creation_win_susp_right_to_left_override.yml` — Potential Defense Evasion Via Right-to-Left Override
+- `rules/windows/process_creation/proc_creation_win_susp_script_interpretor_spawn_credential_scanner.yml` — Script Interpreter Spawning Credential Scanner - Windows
+- `rules/windows/process_creation/proc_creation_win_susp_sensitive_file_access_shadowcopy.yml` — Sensitive File Access Via Volume Shadow Copy Backup
+- `rules/windows/process_creation/proc_creation_win_susp_service_creation.yml` — Suspicious New Service Creation
+- `rules/windows/process_creation/proc_creation_win_susp_service_dir.yml` — Suspicious Service Binary Directory
+- `rules/windows/process_creation/proc_creation_win_susp_shadow_copies_creation.yml` — Shadow Copies Creation Using Operating Systems Utilities
+- `rules/windows/process_creation/proc_creation_win_susp_shadow_copies_deletion.yml` — Shadow Copies Deletion Using Operating Systems Utilities
+- `rules/windows/process_creation/proc_creation_win_susp_shell_spawn_susp_program.yml` — Windows Shell/Scripting Processes Spawning Suspicious Programs
+- `rules/windows/process_creation/proc_creation_win_susp_sysnative.yml` — Process Creation Using Sysnative Folder
+- `rules/windows/process_creation/proc_creation_win_susp_system_exe_anomaly.yml` — System File Execution Location Anomaly
+- `rules/windows/process_creation/proc_creation_win_susp_sysvol_access.yml` — Suspicious SYSVOL Domain Group Policy Access
+- `rules/windows/process_creation/proc_creation_win_susp_task_folder_evasion.yml` — Tasks Folder Evasion
+- `rules/windows/process_creation/proc_creation_win_susp_use_of_te_bin.yml` — Malicious Windows Script Components File Execution by TAEF Detection
+- `rules/windows/process_creation/proc_creation_win_susp_use_of_vsjitdebugger_bin.yml` — Malicious PE Execution by Microsoft Visual Studio Debugger
+- `rules/windows/process_creation/proc_creation_win_susp_velociraptor_child_process.yml` — Suspicious Velociraptor Child Process
+- `rules/windows/process_creation/proc_creation_win_susp_weak_or_abused_passwords.yml` — Weak or Abused Passwords In CLI
+- `rules/windows/process_creation/proc_creation_win_susp_web_request_cmd_and_cmdlets.yml` — Usage Of Web Request Commands And Cmdlets
+- `rules/windows/process_creation/proc_creation_win_susp_whoami_as_param.yml` — WhoAmI as Parameter
+- `rules/windows/process_creation/proc_creation_win_susp_workfolders.yml` — Execution via WorkFolders.exe
+- `rules/windows/process_creation/proc_creation_win_svchost_masqueraded_execution.yml` — Suspicious Process Masquerading As SvcHost.EXE
+- `rules/windows/process_creation/proc_creation_win_sysinternals_accesschk_check_permissions.yml` — Permission Check Via Accesschk.EXE
+- `rules/windows/process_creation/proc_creation_win_sysinternals_adexplorer_execution.yml` — Active Directory Database Snapshot Via ADExplorer
+- `rules/windows/process_creation/proc_creation_win_sysinternals_adexplorer_susp_execution.yml` — Suspicious Active Directory Database Snapshot Via ADExplorer
+- `rules/windows/process_creation/proc_creation_win_sysinternals_livekd_execution.yml` — Potential Memory Dumping Activity Via LiveKD
+- `rules/windows/process_creation/proc_creation_win_sysinternals_procdump.yml` — Procdump Execution
+- `rules/windows/process_creation/proc_creation_win_sysinternals_procdump_evasion.yml` — Potential SysInternals ProcDump Evasion
+- `rules/windows/process_creation/proc_creation_win_sysinternals_psexec_execution.yml` — Psexec Execution
+- `rules/windows/process_creation/proc_creation_win_sysinternals_psexec_remote_execution.yml` — Potential PsExec Remote Execution
+- `rules/windows/process_creation/proc_creation_win_sysinternals_psexesvc.yml` — PsExec Service Execution
+- `rules/windows/process_creation/proc_creation_win_sysinternals_psexesvc_as_system.yml` — PsExec Service Child Process Execution as LOCAL SYSTEM
+- `rules/windows/process_creation/proc_creation_win_sysinternals_psservice.yml` — Sysinternals PsService Execution
+- `rules/windows/process_creation/proc_creation_win_sysinternals_pssuspend_execution.yml` — Sysinternals PsSuspend Execution
+- `rules/windows/process_creation/proc_creation_win_sysinternals_pssuspend_susp_execution.yml` — Sysinternals PsSuspend Suspicious Execution
+- `rules/windows/process_creation/proc_creation_win_sysinternals_sdelete.yml` — Potential File Overwrite Via Sysinternals SDelete
+- `rules/windows/process_creation/proc_creation_win_sysprep_appdata.yml` — Sysprep on AppData Folder
+- `rules/windows/process_creation/proc_creation_win_systeminfo_execution.yml` — Suspicious Execution of Systeminfo
+- `rules/windows/process_creation/proc_creation_win_systemsettingsadminflows_turn_on_dev_features.yml` — Potential Signing Bypass Via Windows Developer Features
+- `rules/windows/process_creation/proc_creation_win_takeown_recursive_own.yml` — Suspicious Recursive Takeown
+- `rules/windows/process_creation/proc_creation_win_tapinstall_execution.yml` — Tap Installer Execution
+- `rules/windows/process_creation/proc_creation_win_tar_compression.yml` — Compressed File Creation Via Tar.EXE
+- `rules/windows/process_creation/proc_creation_win_tar_extraction.yml` — Compressed File Extraction Via Tar.EXE
+- `rules/windows/process_creation/proc_creation_win_taskkill_sep.yml` — Taskkill Symantec Endpoint Protection
+- `rules/windows/process_creation/proc_creation_win_taskmgr_localsystem.yml` — Taskmgr as LOCAL_SYSTEM
+- `rules/windows/process_creation/proc_creation_win_taskmgr_susp_child_process.yml` — New Process Created Via Taskmgr.EXE
+- `rules/windows/process_creation/proc_creation_win_teams_suspicious_command_line_cred_access.yml` — Potentially Suspicious Command Targeting Teams Sensitive Files
+- `rules/windows/process_creation/proc_creation_win_tpmvscmgr_add_virtual_smartcard.yml` — New Virtual Smart Card Created Via TpmVscMgr.EXE
+- `rules/windows/process_creation/proc_creation_win_tscon_localsystem.yml` — Suspicious TSCON Start as SYSTEM
+- `rules/windows/process_creation/proc_creation_win_tscon_rdp_redirect.yml` — Suspicious RDP Redirect Using TSCON
+- `rules/windows/process_creation/proc_creation_win_tscon_rdp_session_hijacking.yml` — Potential RDP Session Hijacking Activity
+- `rules/windows/process_creation/proc_creation_win_uac_bypass_changepk_slui.yml` — UAC Bypass Using ChangePK and SLUI
+- `rules/windows/process_creation/proc_creation_win_uac_bypass_cleanmgr.yml` — UAC Bypass Using Disk Cleanup
+- `rules/windows/process_creation/proc_creation_win_uac_bypass_cmstp.yml` — Bypass UAC via CMSTP
+- `rules/windows/process_creation/proc_creation_win_uac_bypass_cmstp_com_object_access.yml` — CMSTP UAC Bypass via COM Object Access
+- `rules/windows/process_creation/proc_creation_win_uac_bypass_computerdefaults.yml` — UAC Bypass Tools Using ComputerDefaults
+- `rules/windows/process_creation/proc_creation_win_uac_bypass_consent_comctl32.yml` — UAC Bypass Using Consent and Comctl32 - Process
+- `rules/windows/process_creation/proc_creation_win_uac_bypass_dismhost.yml` — UAC Bypass Using DismHost
+- `rules/windows/process_creation/proc_creation_win_uac_bypass_eventvwr_recentviews.yml` — UAC Bypass Using Event Viewer RecentViews
+- `rules/windows/process_creation/proc_creation_win_uac_bypass_fodhelper.yml` — Bypass UAC via Fodhelper.exe
+- `rules/windows/process_creation/proc_creation_win_uac_bypass_hijacking_firwall_snap_in.yml` — UAC Bypass via Windows Firewall Snap-In Hijack
+- `rules/windows/process_creation/proc_creation_win_uac_bypass_icmluautil.yml` — UAC Bypass via ICMLuaUtil
+- `rules/windows/process_creation/proc_creation_win_uac_bypass_idiagnostic_profile.yml` — UAC Bypass Using IDiagnostic Profile
+- `rules/windows/process_creation/proc_creation_win_uac_bypass_ieinstal.yml` — UAC Bypass Using IEInstal - Process
+- `rules/windows/process_creation/proc_creation_win_uac_bypass_msconfig_gui.yml` — UAC Bypass Using MSConfig Token Modification - Process
+- `rules/windows/process_creation/proc_creation_win_uac_bypass_ntfs_reparse_point.yml` — UAC Bypass Using NTFS Reparse Point - Process
+- `rules/windows/process_creation/proc_creation_win_uac_bypass_pkgmgr_dism.yml` — UAC Bypass Using PkgMgr and DISM
+- `rules/windows/process_creation/proc_creation_win_uac_bypass_sdclt.yml` — Potential UAC Bypass Via Sdclt.EXE
+- `rules/windows/process_creation/proc_creation_win_uac_bypass_trustedpath.yml` — TrustedPath UAC Bypass Pattern
+- `rules/windows/process_creation/proc_creation_win_uac_bypass_winsat.yml` — UAC Bypass Abusing Winsat Path Parsing - Process
+- `rules/windows/process_creation/proc_creation_win_uac_bypass_wmp.yml` — UAC Bypass Using Windows Media Player - Process
+- `rules/windows/process_creation/proc_creation_win_uac_bypass_wsreset.yml` — Bypass UAC via WSReset.exe
+- `rules/windows/process_creation/proc_creation_win_uac_bypass_wsreset_integrity_level.yml` — UAC Bypass WSReset
+- `rules/windows/process_creation/proc_creation_win_ultravnc.yml` — Use of UltraVNC Remote Access Software
+- `rules/windows/process_creation/proc_creation_win_ultravnc_susp_execution.yml` — Suspicious UltraVNC Execution
+- `rules/windows/process_creation/proc_creation_win_uninstall_crowdstrike_falcon.yml` — Uninstall Crowdstrike Falcon Sensor
+- `rules/windows/process_creation/proc_creation_win_user_shell_folders_registry_modification.yml` — User Shell Folders Registry Modification via CommandLine
+- `rules/windows/process_creation/proc_creation_win_vaultcmd_list_creds.yml` — Windows Credential Manager Access via VaultCmd
+- `rules/windows/process_creation/proc_creation_win_vbscript_registry_modification.yml` — Registry Modification Attempt Via VBScript
+- `rules/windows/process_creation/proc_creation_win_verclsid_runs_com.yml` — Verclsid.exe Runs COM Object
+- `rules/windows/process_creation/proc_creation_win_virtualbox_execution.yml` — Virtualbox Driver Installation or Starting of VMs
+- `rules/windows/process_creation/proc_creation_win_virtualbox_vboxdrvinst_execution.yml` — Suspicious VBoxDrvInst.exe Parameters
+- `rules/windows/process_creation/proc_creation_win_vmware_toolbox_cmd_persistence.yml` — Potential Persistence Via VMwareToolBoxCmd.EXE VM State Change Script
+- `rules/windows/process_creation/proc_creation_win_vmware_toolbox_cmd_persistence_susp.yml` — Suspicious Persistence Via VMwareToolBoxCmd.EXE VM State Change Script
+- `rules/windows/process_creation/proc_creation_win_vscode_child_processes_anomalies.yml` — Potentially Suspicious Child Process Of VsCode
+- `rules/windows/process_creation/proc_creation_win_vscode_tunnel_remote_shell_.yml` — Visual Studio Code Tunnel Shell Execution
+- `rules/windows/process_creation/proc_creation_win_vscode_tunnel_service_install.yml` — Visual Studio Code Tunnel Service Installation
+- `rules/windows/process_creation/proc_creation_win_vsdiagnostics_execution_proxy.yml` — Potential Binary Proxy Execution Via VSDiagnostics.EXE
+- `rules/windows/process_creation/proc_creation_win_vshadow_exec.yml` — Proxy Execution via Vshadow
+- `rules/windows/process_creation/proc_creation_win_vslsagent_agentextensionpath_load.yml` — Suspicious Vsls-Agent Command With AgentExtensionPath Load
+- `rules/windows/process_creation/proc_creation_win_vulnerable_driver_blocklist_registry_tampering.yml` — Vulnerable Driver Blocklist Registry Tampering Via CommandLine
+- `rules/windows/process_creation/proc_creation_win_w32tm.yml` — Use of W32tm as Timer
+- `rules/windows/process_creation/proc_creation_win_wab_execution_from_non_default_location.yml` — Wab Execution From Non Default Location
+- `rules/windows/process_creation/proc_creation_win_wab_unusual_parents.yml` — Wab/Wabmig Unusual Parent Or Child Processes
+- `rules/windows/process_creation/proc_creation_win_wbadmin_delete_all_backups.yml` — All Backups Deleted Via Wbadmin.EXE
+- `rules/windows/process_creation/proc_creation_win_wbadmin_delete_backups.yml` — Windows Backup Deleted Via Wbadmin.EXE
+- `rules/windows/process_creation/proc_creation_win_wbadmin_dump_sensitive_files.yml` — Sensitive File Dump Via Wbadmin.EXE
+- `rules/windows/process_creation/proc_creation_win_wbadmin_restore_file.yml` — File Recovery From Backup Via Wbadmin.EXE
+- `rules/windows/process_creation/proc_creation_win_wbadmin_restore_sensitive_files.yml` — Sensitive File Recovery From Backup Via Wbadmin.EXE
+- `rules/windows/process_creation/proc_creation_win_webdav_lnk_execution.yml` — Potentially Suspicious WebDAV LNK Execution
+- `rules/windows/process_creation/proc_creation_win_webshell_chopper.yml` — Chopper Webshell Process Pattern
+- `rules/windows/process_creation/proc_creation_win_webshell_hacking.yml` — Webshell Hacking Activity Patterns
+- `rules/windows/process_creation/proc_creation_win_webshell_tool_recon.yml` — Webshell Tool Reconnaissance Activity
+- `rules/windows/process_creation/proc_creation_win_werfault_lsass_shtinkering.yml` — Potential Credential Dumping Via WER
+- `rules/windows/process_creation/proc_creation_win_werfault_reflect_debugger_exec.yml` — Potential ReflectDebugger Content Execution Via WerFault.EXE
+- `rules/windows/process_creation/proc_creation_win_werfaultsecure_abuse.yml` — PPL Tampering Via WerFaultSecure
+- `rules/windows/process_creation/proc_creation_win_wermgr_susp_child_process.yml` — Suspicious Child Process Of Wermgr.EXE
+- `rules/windows/process_creation/proc_creation_win_wermgr_susp_exec_location.yml` — Suspicious Execution Location Of Wermgr.EXE
+- `rules/windows/process_creation/proc_creation_win_where_browser_data_recon.yml` — Suspicious Where Execution
+- `rules/windows/process_creation/proc_creation_win_whoami_execution_from_high_priv_process.yml` — Whoami.EXE Execution From Privileged Process
+- `rules/windows/process_creation/proc_creation_win_whoami_groups_discovery.yml` — Group Membership Reconnaissance Via Whoami.EXE
+- `rules/windows/process_creation/proc_creation_win_whoami_output.yml` — Whoami.EXE Execution With Output Option
+- `rules/windows/process_creation/proc_creation_win_whoami_priv_discovery.yml` — Security Privileges Enumeration Via Whoami.EXE
+- `rules/windows/process_creation/proc_creation_win_windows_terminal_susp_children.yml` — Suspicious WindowsTerminal Child Processes
+- `rules/windows/process_creation/proc_creation_win_winget_add_custom_source.yml` — Add New Download Source To Winget
+- `rules/windows/process_creation/proc_creation_win_winget_add_insecure_custom_source.yml` — Add Insecure Download Source To Winget
+- `rules/windows/process_creation/proc_creation_win_winget_local_install_via_manifest.yml` — Install New Package Via Winget Local Manifest
+- `rules/windows/process_creation/proc_creation_win_winrar_exfil_dmp_files.yml` — Winrar Compressing Dump Files
+- `rules/windows/process_creation/proc_creation_win_winrar_susp_child_process.yml` — Potentially Suspicious Child Process Of WinRAR.EXE
+- `rules/windows/process_creation/proc_creation_win_winrar_uncommon_folder_execution.yml` — WinRAR Execution in Non-Standard Folder
+- `rules/windows/process_creation/proc_creation_win_winrm_awl_bypass.yml` — AWL Bypass with Winrm.vbs and Malicious WsmPty.xsl/WsmTxt.xsl
+- `rules/windows/process_creation/proc_creation_win_winrm_execution_via_scripting_api_winrm_vbs.yml` — Remote Code Execute via Winrm.vbs
+- `rules/windows/process_creation/proc_creation_win_winrm_remote_powershell_session_process.yml` — Remote PowerShell Session Host Process (WinRM)
+- `rules/windows/process_creation/proc_creation_win_winrm_susp_child_process.yml` — Suspicious Processes Spawned by WinRM
+- `rules/windows/process_creation/proc_creation_win_winrshost_command_execution.yml` — Potential Lateral Movement via Windows Remote Shell
+- `rules/windows/process_creation/proc_creation_win_winzip_password_compression.yml` — Compress Data and Lock With Password for Exfiltration With WINZIP
+- `rules/windows/process_creation/proc_creation_win_wmi_backdoor_exchange_transport_agent.yml` — WMI Backdoor Exchange Transport Agent
+- `rules/windows/process_creation/proc_creation_win_wmi_password_never_expire.yml` — Password Set to Never Expire via WMI
+- `rules/windows/process_creation/proc_creation_win_wmi_persistence_script_event_consumer.yml` — WMI Persistence - Script Event Consumer
+- `rules/windows/process_creation/proc_creation_win_wmic_eventconsumer_creation.yml` — New ActiveScriptEventConsumer Created Via Wmic.EXE
+- `rules/windows/process_creation/proc_creation_win_wmic_namespace_defender.yml` — Potential Windows Defender Tampering Via Wmic.EXE
+- `rules/windows/process_creation/proc_creation_win_wmic_process_creation.yml` — New Process Created Via Wmic.EXE
+- `rules/windows/process_creation/proc_creation_win_wmic_recon_computersystem.yml` — Computer System Reconnaissance Via Wmic.EXE
+- `rules/windows/process_creation/proc_creation_win_wmic_recon_csproduct.yml` — Hardware Model Reconnaissance Via Wmic.EXE
+- `rules/windows/process_creation/proc_creation_win_wmic_recon_group.yml` — Local Groups Reconnaissance Via Wmic.EXE
+- `rules/windows/process_creation/proc_creation_win_wmic_recon_hotfix.yml` — Windows Hotfix Updates Reconnaissance Via Wmic.EXE
+- `rules/windows/process_creation/proc_creation_win_wmic_recon_process.yml` — Process Reconnaissance Via Wmic.EXE
+- `rules/windows/process_creation/proc_creation_win_wmic_recon_product.yml` — Potential Product Reconnaissance Via Wmic.EXE
+- `rules/windows/process_creation/proc_creation_win_wmic_recon_product_class.yml` — Potential Product Class Reconnaissance Via Wmic.EXE
+- `rules/windows/process_creation/proc_creation_win_wmic_recon_service.yml` — Service Reconnaissance Via Wmic.EXE
+- `rules/windows/process_creation/proc_creation_win_wmic_recon_system_info_uncommon.yml` — Uncommon System Information Discovery Via Wmic.EXE
+- `rules/windows/process_creation/proc_creation_win_wmic_recon_unquoted_service_search.yml` — Potential Unquoted Service Path Reconnaissance Via Wmic.EXE
+- `rules/windows/process_creation/proc_creation_win_wmic_recon_volume.yml` — System Disk And Volume Reconnaissance Via Wmic.EXE
+- `rules/windows/process_creation/proc_creation_win_wmic_service_manipulation.yml` — Service Started/Stopped Via Wmic.EXE
+- `rules/windows/process_creation/proc_creation_win_wmic_service_startup_change.yml` — Service Startup Type Change Via Wmic.EXE
+- `rules/windows/process_creation/proc_creation_win_wmic_stdregprov_reg_modification.yml` — Registry Manipulation via WMI Stdregprov
+- `rules/windows/process_creation/proc_creation_win_wmic_susp_execution_via_office_process.yml` — Suspicious WMIC Execution Via Office Process
+- `rules/windows/process_creation/proc_creation_win_wmic_susp_process_creation.yml` — Suspicious Process Created Via Wmic.EXE
+- `rules/windows/process_creation/proc_creation_win_wmic_terminate_application.yml` — Application Terminated Via Wmic.EXE
+- `rules/windows/process_creation/proc_creation_win_wmic_uninstall_application.yml` — Application Removed Via Wmic.EXE
+- `rules/windows/process_creation/proc_creation_win_wmic_uninstall_security_products.yml` — Potential Tampering With Security Products Via WMIC
+- `rules/windows/process_creation/proc_creation_win_wmiprvse_spawns_powershell.yml` — Potential WMI Lateral Movement WmiPrvSE Spawned PowerShell
+- `rules/windows/process_creation/proc_creation_win_wmiprvse_susp_child_processes.yml` — Suspicious WmiPrvSE Child Process
+- `rules/windows/process_creation/proc_creation_win_wpbbin_potential_persistence.yml` — UEFI Persistence Via Wpbbin - ProcessCreation
+- `rules/windows/process_creation/proc_creation_win_wscript_cscript_mshta_dropper.yml` — Potential Dropper Script Execution Via WScript/CScript/MSHTA
+- `rules/windows/process_creation/proc_creation_win_wscript_cscript_susp_child_processes.yml` — Cscript/Wscript Potentially Suspicious Child Process
+- `rules/windows/process_creation/proc_creation_win_wscript_cscript_uncommon_extension_exec.yml` — Cscript/Wscript Uncommon Script Extension Execution
+- `rules/windows/process_creation/proc_creation_win_wsl_child_processes_anomalies.yml` — WSL Child Process Anomaly
+- `rules/windows/process_creation/proc_creation_win_wsl_kali_linux_installation.yml` — Installation of WSL Kali-Linux
+- `rules/windows/process_creation/proc_creation_win_wsl_kali_linux_usage.yml` — WSL Kali-Linux Usage
+- `rules/windows/process_creation/proc_creation_win_wuauclt_dll_loading.yml` — Proxy Execution Via Wuauclt.EXE
+- `rules/windows/process_creation/proc_creation_win_wuauclt_no_cli_flags_execution.yml` — Suspicious Windows Update Agent Empty Cmdline
+- `rules/windows/process_creation/proc_creation_win_wusa_cab_files_extraction_from_susp_paths.yml` — Cab File Extraction Via Wusa.EXE From Potentially Suspicious Paths
+- `rules/windows/process_creation/proc_creation_win_wusa_susp_parent_execution.yml` — Wusa.EXE Executed By Parent Process Located In Suspicious Location
+- `rules/windows/process_creation/proc_creation_win_xwizard_execution_non_default_location.yml` — Xwizard.EXE Execution From Non-Default Location
+
+### Compiles, unmapped field(s) (0)
+
+### Failed: `unsupported_value_type:SigmaExpansion` (77)
+- `rules/windows/process_creation/proc_creation_win_certoc_load_dll.yml` — DLL Loaded via CertOC.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_certoc_load_dll_susp_locations.yml` — Suspicious DLL Loaded via CertOC.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_certreq_download.yml` — Suspicious CertReq Command to Download: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_certutil_certificate_installation.yml` — New Root Certificate Installed Via Certutil.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_certutil_decode.yml` — File Decoded From Base64/Hex Via Certutil.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_certutil_encode.yml` — File Encoded To Base64 Via Certutil.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_certutil_encode_susp_extensions.yml` — Suspicious File Encoded To Base64 Via Certutil.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_certutil_encode_susp_location.yml` — File In Suspicious Location Encoded To Base64 Via Certutil.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_certutil_export_pfx.yml` — Certificate Exported Via Certutil.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_chcp_codepage_lookup.yml` — Console CodePage Lookup Via CHCP: Unsupported Sigma value type 'SigmaExpansion' on field 'ParentCommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_cmd_curl_download_exec_combo.yml` — Curl Download And Execute Combination: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_cmd_del_execution.yml` — File Deletion Via Del: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_cmd_dir_execution.yml` — File And SubFolder Enumeration Via Dir Command: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_cmd_launched_with_hidden_start_flag.yml` — Cmd Launched with Hidden Start Flags to Suspicious Targets: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_cmd_ping_copy_combined_execution.yml` — Potentially Suspicious Ping/Copy Command Combination: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_cmd_ping_del_combined_execution.yml` — Suspicious Ping/Del Command Combination: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_cmdkey_adding_generic_creds.yml` — New Generic Credentials Added Via Cmdkey.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_cmdkey_recon.yml` — Potential Reconnaissance For Cached Credentials Via Cmdkey.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_discovery_via_reg_queries.yml` — System Information Discovery via Registry Queries: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_diskshadow_script_mode_susp_ext.yml` — Diskshadow Script Mode - Uncommon Script Extension Execution: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_diskshadow_script_mode_susp_location.yml` — Diskshadow Script Mode - Execution From Potential Suspicious Location: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_esentutl_sensitive_file_copy.yml` — Copying Sensitive Files with Credential Data: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_esentutl_webcache.yml` — Esentutl Steals Browser Information: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_expand_cabinet_files.yml` — Potentially Suspicious Cabinet File Expansion: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_explorer_break_process_tree.yml` — Explorer Process Tree Break: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_findstr_download.yml` — Remote File Download Via Findstr.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_findstr_lsass.yml` — LSASS Process Reconnaissance Via Findstr.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_findstr_subfolder_search.yml` — Insensitive Subfolder Search Via Findstr.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_forfiles_proxy_execution_.yml` — Forfiles Command Execution: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_ftp_arbitrary_command_execution.yml` — Potential Arbitrary Command Execution Via FTP.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_iexpress_susp_execution.yml` — Self Extracting Package Creation Via Iexpress.EXE From Potentially Suspicious Location: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_iis_appcmd_susp_module_install.yml` — IIS Native-Code Module Command Line Installation: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_lodctr_performance_counter_tampering.yml` — Rebuild Performance Counter Values Via Lodctr.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_lolbin_replace.yml` — Replace.exe Usage: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_lolbin_unregmp2.yml` — Lolbin Unregmp2.exe Use As Proxy: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_msdt_answer_file_exec.yml` — MSDT Execution Via Answer File: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_msdt_arbitrary_command_execution.yml` — Potential Arbitrary Command Execution Using Msdt.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_msdt_susp_cab_options.yml` — Suspicious Cabinet File Execution Via Msdt.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_msiexec_dll.yml` — DllUnregisterServer Function Call Via Msiexec.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_msiexec_execute_dll.yml` — Suspicious Msiexec Execute Arbitrary DLL: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_msiexec_install_quiet.yml` — Msiexec Quiet Installation: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_msiexec_install_remote.yml` — Suspicious Msiexec Quiet Install From Remote Location: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_mstsc_remote_connection.yml` — New Remote Desktop Connection Initiated Via Mstsc.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_odbcconf_response_file.yml` — Response File Execution Via Odbcconf.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_odbcconf_response_file_susp.yml` — Suspicious Response File Execution Via Odbcconf.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_print_dump_sensitive_files.yml` — Sensitive File Dump Via Print.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_rdrleakdiag_process_dumping.yml` — Process Memory Dump via RdrLeakDiag.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_reagentc_disable_windows_recovery_environment.yml` — Windows Recovery Environment Disabled Via Reagentc: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_reg_service_imagepath_change.yml` — Changing Existing Service ImagePath Value Via Reg.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_regedit_export_critical_keys.yml` — Exports Critical Registry Keys To a File: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_regedit_export_keys.yml` — Exports Registry Key To a File: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_regedit_import_keys.yml` — Imports Registry Key From a File: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_regsvr32_flags_anomaly.yml` — Potential Regsvr32 Commandline Flag Anomaly: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_renamed_schtasks_execution.yml` — Renamed Schtasks Execution: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_renamed_sysinternals_procdump.yml` — Renamed ProcDump Execution: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_rpcping_credential_capture.yml` — Capture Credentials with Rpcping.exe: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_schtasks_curl_and_powershell_combo.yml` — Scheduled Task Creation with Curl and PowerShell Execution Combo: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_schtasks_delete.yml` — Delete Important Scheduled Task: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_schtasks_disable.yml` — Disable Important Scheduled Task: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_schtasks_env_folder.yml` — Schedule Task Creation From Env Variable Or Potentially Suspicious Path Via Schtasks.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_schtasks_system_process.yml` — Scheduled Task Creation Masquerading as System Processes: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_ssh_port_forward.yml` — Port Forwarding Activity Via SSH.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_sysinternals_eula_accepted.yml` — Potential Execution of Sysinternals Tools: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_sysinternals_livekd_kernel_memory_dump.yml` — Kernel Memory Dump Via LiveKD: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_sysinternals_procdump_lsass.yml` — Potential LSASS Process Dump Via Procdump: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_sysinternals_psexec_paexec_escalate_system.yml` — PsExec/PAExec Escalation to LOCAL SYSTEM: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_sysinternals_psloglist.yml` — Suspicious Use of PsLogList: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_sysinternals_susp_psexec_paexec_flags.yml` — Potential Privilege Escalation To LOCAL SYSTEM: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_sysinternals_sysmon_config_update.yml` — Sysmon Configuration Update: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_sysinternals_sysmon_uninstall.yml` — Uninstall Sysinternals Sysmon: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_tasklist_module_enumeration.yml` — Loaded Module Enumeration Via Tasklist.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_whoami_all_execution.yml` — Enumerate All Information With Whoami.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_winrs_local_command_execution.yml` — Winrs Local Command Execution: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_wlrmdr_uncommon_child_process.yml` — Wlrmdr.EXE Uncommon Argument Or Child Process: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_wmic_remote_execution.yml` — WMIC Remote Command Execution: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_wmic_squiblytwo_bypass.yml` — Potential Remote SquiblyTwo Technique Execution: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_wmic_xsl_script_processing.yml` — XSL Script Execution Via WMIC.EXE: Unsupported Sigma value type 'SigmaExpansion' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+
+### Failed: `unsupported_value_type:SigmaRegularExpression` (39)
+- `rules/windows/process_creation/proc_creation_win_certoc_download_direct_ip.yml` — File Download From IP Based URL Via CertOC.EXE: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_csc_susp_dynamic_compilation.yml` — Dynamic .NET Compilation Via Csc.EXE: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_csc_susp_parent.yml` — Csc.EXE Execution Form Potentially Suspicious Parent: Unsupported Sigma value type 'SigmaRegularExpression' on field 'ParentCommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_curl_cookie_hijacking.yml` — Potential Cookies Session Hijacking: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_curl_custom_user_agent.yml` — Curl Web Request With Potential Custom User-Agent: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_curl_download_direct_ip_exec.yml` — File Download From IP URL Via Curl.EXE: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_curl_download_direct_ip_susp_extensions.yml` — Suspicious File Download From IP Via Curl.EXE: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_curl_insecure_connection.yml` — Insecure Transfer Via Curl.EXE: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_hktl_invoke_obfuscation_obfuscated_iex_commandline.yml` — Invoke-Obfuscation Obfuscated IEX Invocation: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_hktl_invoke_obfuscation_stdin.yml` — Invoke-Obfuscation STDIN+ Launcher: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_hktl_invoke_obfuscation_var.yml` — Invoke-Obfuscation VAR+ Launcher: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_hktl_invoke_obfuscation_via_stdin.yml` — Invoke-Obfuscation Via Stdin: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_hktl_invoke_obfuscation_via_use_clip.yml` — Invoke-Obfuscation Via Use Clip: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_hktl_wsass.yml` — HackTool - WSASS Execution: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_lolbin_diantz_ads.yml` — Suspicious Diantz Alternate Data Stream Execution: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_lolbin_extrac32_ads.yml` — Suspicious Extrac32 Alternate Data Stream Execution: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_ping_hex_ip.yml` — Ping Hex IP: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_powershell_cmdline_special_characters.yml` — Potential PowerShell Command Line Obfuscation: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_powershell_run_script_from_input_stream.yml` — Run PowerShell Script from Redirected Input Stream: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_powershell_token_obfuscation.yml` — Powershell Token Obfuscation - Process Creation: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_regedit_import_keys_ads.yml` — Imports Registry Key From an ADS: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_regini_ads.yml` — Suspicious Registry Modification From ADS Via Regini.EXE: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_regini_execution.yml` — Registry Modification Via Regini.EXE: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_rundll32_ads_stored_dll_execution.yml` — Potential Rundll32 Execution With DLL Stored In ADS: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_rundll32_webdav_client_susp_execution.yml` — Suspicious WebDav Client Execution Via Rundll32.EXE: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_susp_copy_system_dir.yml` — Suspicious Copy From or To System Directory: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_susp_data_exfiltration_via_cli.yml` — Potential Data Exfiltration Activity Via CommandLine Tools: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_susp_lnk_exec_hidden_cmd.yml` — Suspicious LNK Command-Line Padding with Whitespace Characters: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_susp_network_command.yml` — Suspicious Network Command: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_susp_obfuscated_ip_download.yml` — Obfuscated IP Download Activity: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_susp_obfuscated_ip_via_cli.yml` — Obfuscated IP Via CLI: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_susp_system_user_anomaly.yml` — Suspicious SYSTEM User Process Creation: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_svchost_uncommon_command_line_flags.yml` — Uncommon Svchost Command Line Parameter: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_wget_download_direct_ip.yml` — Suspicious File Download From IP Via Wget.EXE: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_wget_download_susp_file_sharing_domains.yml` — Suspicious File Download From File Sharing Domain Via Wget.EXE: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_wget_download_susp_locations.yml` — Suspicious File Download From IP Via Wget.EXE - Paths: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_winget_add_susp_custom_source.yml` — Add Potential Suspicious New Download Source To Winget: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_wsl_windows_binaries_execution.yml` — Windows Binary Executed From WSL: Unsupported Sigma value type 'SigmaRegularExpression' on field 'Image' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+- `rules/windows/process_creation/proc_creation_win_xwizard_runwizard_com_object_exec.yml` — COM Object Execution via Xwizard.EXE: Unsupported Sigma value type 'SigmaRegularExpression' on field 'CommandLine' (e.g. numeric comparison, |re, |cidr, |base64offset). The compiler only supports plain string matching; these are not implemented and must not silently produce a wrong rule.
+
+### Failed: `null_value` (24)
+- `rules/windows/process_creation/proc_creation_win_bash_file_execution.yml` — Indirect Command Execution From Script File Via Bash.EXE: Field 'CommandLine' has a null value, which cannot be compiled to a match. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_citrix_trolleyexpress_procdump.yml` — Process Access via TrolleyExpress Exclusion: Field 'OriginalFileName' has a null value, which cannot be compiled to a match. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_conhost_susp_child_process.yml` — Uncommon Child Process Of Conhost.EXE: Field 'Image' has a null value, which cannot be compiled to a match. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_dllhost_no_cli_execution.yml` — Dllhost.EXE Execution Anomaly: Field 'CommandLine' has a null value, which cannot be compiled to a match. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_googleupdate_susp_child_process.yml` — Potentially Suspicious GoogleUpdate Child Process: Field 'Image' has a null value, which cannot be compiled to a match. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_gup_arbitrary_binary_execution.yml` — Arbitrary Binary Execution Using GUP Utility: Field 'CommandLine' has a null value, which cannot be compiled to a match. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_lolbin_ie4uinit.yml` — Ie4uinit Lolbin Use From Invalid Path: Field 'CurrentDirectory' has a null value, which cannot be compiled to a match. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_regsvr32_uncommon_extension.yml` — Regsvr32 DLL Execution With Uncommon Extension: Field 'CommandLine' has a null value, which cannot be compiled to a match. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_rundll32_uncommon_dll_extension.yml` — Rundll32 Execution With Uncommon DLL Extension: Field 'CommandLine' has a null value, which cannot be compiled to a match. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_sdbinst_susp_extension.yml` — Uncommon Extension Shim Database Installation Via Sdbinst.EXE: Field 'CommandLine' has a null value, which cannot be compiled to a match. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_susp_elevated_system_shell_uncommon_parent.yml` — Elevated System Shell Spawned From Uncommon Parent Location: Field 'ParentImage' has a null value, which cannot be compiled to a match. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_susp_image_missing.yml` — Execution Of Non-Existing File: Field 'Image' has a null value, which cannot be compiled to a match. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_susp_parents.yml` — Suspicious Process Parents: Field 'Image' has a null value, which cannot be compiled to a match. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_susp_proc_wrong_parent.yml` — Windows Processes Suspicious Parent Directory: Field 'ParentImage' has a null value, which cannot be compiled to a match. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_susp_userinit_child.yml` — Suspicious Userinit Child Process: Field 'Image' has a null value, which cannot be compiled to a match. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_svchost_execution_with_no_cli_flags.yml` — Suspect Svchost Activity: Field 'CommandLine' has a null value, which cannot be compiled to a match. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_svchost_termserv_proc_spawn.yml` — Terminal Service Process Spawn: Field 'Image' has a null value, which cannot be compiled to a match. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_svchost_uncommon_parent_process.yml` — Uncommon Svchost Parent Process: Field 'ParentImage' has a null value, which cannot be compiled to a match. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_sysinternals_tools_masquerading.yml` — Potential Binary Impersonating Sysinternals Tools: Field 'Company' has a null value, which cannot be compiled to a match. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_userinit_uncommon_child_processes.yml` — Uncommon Userinit Child Process: Field 'Image' has a null value, which cannot be compiled to a match. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_vscode_tunnel_execution.yml` — Visual Studio Code Tunnel Execution: Field 'OriginalFileName' has a null value, which cannot be compiled to a match. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_vscode_tunnel_renamed_execution.yml` — Renamed Visual Studio Code Tunnel Execution: Field 'OriginalFileName' has a null value, which cannot be compiled to a match. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_whoami_parent_anomaly.yml` — Whoami.EXE Execution Anomaly: Field 'ParentImage' has a null value, which cannot be compiled to a match. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_wmiprvse_spawning_process.yml` — WmiPrvSE Spawned A Process: Field 'LogonId' has a null value, which cannot be compiled to a match. Give the field a concrete value.
+
+### Failed: `value_error:other` (14)
+- `rules/windows/process_creation/proc_creation_win_browsers_chromium_headless_file_download.yml` — File Download with Headless Browser: AND clause cartesian product too large (33554432 > 500): this Sigma rule's nested OR/AND structure would explode into too many DNF clauses to compile safely. Simplify the rule's condition logic.
+- `rules/windows/process_creation/proc_creation_win_curl_download_susp_file_sharing_domains.yml` — Suspicious File Download From File Sharing Domain Via Curl.EXE: AND clause cartesian product too large (5760 > 500): this Sigma rule's nested OR/AND structure would explode into too many DNF clauses to compile safely. Simplify the rule's condition logic.
+- `rules/windows/process_creation/proc_creation_win_hktl_lazagne.yml` — HackTool - LaZagne Execution: AND clause cartesian product too large (700 > 500): this Sigma rule's nested OR/AND structure would explode into too many DNF clauses to compile safely. Simplify the rule's condition logic.
+- `rules/windows/process_creation/proc_creation_win_office_susp_child_processes.yml` — Suspicious Microsoft Office Child Process: AND clause cartesian product too large (740 > 500): this Sigma rule's nested OR/AND structure would explode into too many DNF clauses to compile safely. Simplify the rule's condition logic.
+- `rules/windows/process_creation/proc_creation_win_powershell_download_susp_file_sharing_domains.yml` — Potentially Suspicious File Download From File Sharing Domain Via PowerShell.EXE: AND clause cartesian product too large (600 > 500): this Sigma rule's nested OR/AND structure would explode into too many DNF clauses to compile safely. Simplify the rule's condition logic.
+- `rules/windows/process_creation/proc_creation_win_powershell_set_policies_to_unsecure_level.yml` — Change PowerShell Policies to an Insecure Level: AND clause cartesian product too large (36864 > 500): this Sigma rule's nested OR/AND structure would explode into too many DNF clauses to compile safely. Simplify the rule's condition logic.
+- `rules/windows/process_creation/proc_creation_win_powershell_webclient_casing.yml` — Net WebClient Casing Anomalies: AND clause cartesian product too large (580 > 500): this Sigma rule's nested OR/AND structure would explode into too many DNF clauses to compile safely. Simplify the rule's condition logic.
+- `rules/windows/process_creation/proc_creation_win_pua_pingcastle_script_parent.yml` — PUA - PingCastle Execution From Potentially Suspicious Parent: AND clause cartesian product too large (5808 > 500): this Sigma rule's nested OR/AND structure would explode into too many DNF clauses to compile safely. Simplify the rule's condition logic.
+- `rules/windows/process_creation/proc_creation_win_susp_double_extension.yml` — Suspicious Double Extension File Execution: AND clause cartesian product too large (900 > 500): this Sigma rule's nested OR/AND structure would explode into too many DNF clauses to compile safely. Simplify the rule's condition logic.
+- `rules/windows/process_creation/proc_creation_win_susp_inline_win_api_access.yml` — Potential WinAPI Calls Via CommandLine: AND clause cartesian product too large (1440 > 500): this Sigma rule's nested OR/AND structure would explode into too many DNF clauses to compile safely. Simplify the rule's condition logic.
+- `rules/windows/process_creation/proc_creation_win_susp_script_exec_from_env_folder.yml` — Script Interpreter Execution From Suspicious Folder: AND clause cartesian product too large (1944 > 500): this Sigma rule's nested OR/AND structure would explode into too many DNF clauses to compile safely. Simplify the rule's condition logic.
+- `rules/windows/process_creation/proc_creation_win_susp_service_tamper.yml` — Suspicious Windows Service Tampering: AND clause cartesian product too large (27013 > 500): this Sigma rule's nested OR/AND structure would explode into too many DNF clauses to compile safely. Simplify the rule's condition logic.
+- `rules/windows/process_creation/proc_creation_win_webshell_recon_commands_and_processes.yml` — Webshell Detection With Command Line Keywords: AND clause cartesian product too large (812 > 500): this Sigma rule's nested OR/AND structure would explode into too many DNF clauses to compile safely. Simplify the rule's condition logic.
+- `rules/windows/process_creation/proc_creation_win_webshell_susp_process_spawned_from_webserver.yml` — Suspicious Process By Web Server Process: AND clause cartesian product too large (2204 > 500): this Sigma rule's nested OR/AND structure would explode into too many DNF clauses to compile safely. Simplify the rule's condition logic.
+
+### Failed: `empty_value` (5)
+- `rules/windows/process_creation/proc_creation_win_offlinescannershell_mpclient_sideloading.yml` — Potential Mpclient.DLL Sideloading Via OfflineScannerShell.EXE Execution: Field 'CurrentDirectory' has an empty value, which would compile to '(?i)^$' and match only an empty field — almost certainly unintended. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_regsvr32_susp_exec_path_2.yml` — Regsvr32 Execution From Highly Suspicious Location: Field 'CommandLine' has an empty value, which would compile to '(?i)^$' and match only an empty field — almost certainly unintended. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_susp_lolbin_exec_from_non_c_drive.yml` — LOLBIN Execution From Abnormal Drive: Field 'CurrentDirectory' has an empty value, which would compile to '(?i)^$' and match only an empty field — almost certainly unintended. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_susp_non_exe_image.yml` — Execution of Suspicious File Type Extension: Field 'Image' has an empty value, which would compile to '(?i)^$' and match only an empty field — almost certainly unintended. Give the field a concrete value.
+- `rules/windows/process_creation/proc_creation_win_vmware_vmtoolsd_susp_child_process.yml` — VMToolsd Suspicious Child Process: Field 'CommandLine' has an empty value, which would compile to '(?i)^$' and match only an empty field — almost certainly unintended. Give the field a concrete value.
+
+### Failed: `unsupported_modifier:base64offset` (4)
+- `rules/windows/process_creation/proc_creation_win_powershell_base64_frombase64string.yml` — PowerShell Base64 Encoded FromBase64String Cmdlet: Unsupported Sigma modifier '|base64offset' on field 'CommandLine' in selection 'selection': not implemented. It would compile to an exact-match on the encoded literal — a silent false-negative detection. Remove the modifier or add real support before shipping this rule.
+- `rules/windows/process_creation/proc_creation_win_powershell_base64_iex.yml` — PowerShell Base64 Encoded IEX Cmdlet: Unsupported Sigma modifier '|base64offset' on field 'CommandLine' in selection 'selection': not implemented. It would compile to an exact-match on the encoded literal — a silent false-negative detection. Remove the modifier or add real support before shipping this rule.
+- `rules/windows/process_creation/proc_creation_win_powershell_base64_mppreference.yml` — Powershell Base64 Encoded MpPreference Cmdlet: Unsupported Sigma modifier '|base64offset' on field 'CommandLine' in selection 'selection': not implemented. It would compile to an exact-match on the encoded literal — a silent false-negative detection. Remove the modifier or add real support before shipping this rule.
+- `rules/windows/process_creation/proc_creation_win_powershell_defender_disable_feature.yml` — Powershell Defender Disable Scan Feature: Unsupported Sigma modifier '|base64offset' on field 'CommandLine' in selection 'selection_encoded_modifier': not implemented. It would compile to an exact-match on the encoded literal — a silent false-negative detection. Remove the modifier or add real support before shipping this rule.
