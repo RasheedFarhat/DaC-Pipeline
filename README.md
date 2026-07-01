@@ -7,7 +7,7 @@
 [![pip-audit](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/pip-audit.yml/badge.svg)](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/pip-audit.yml)
 ![Python](https://img.shields.io/badge/Python-3.11+-yellow?logo=python)
 ![SIEM](https://img.shields.io/badge/SIEM-Wazuh_v4.9-00AEEF)
-![Tests](https://img.shields.io/badge/tests-41_passing-success)
+![Tests](https://img.shields.io/badge/tests-63_passing-success)
 ![License](https://img.shields.io/badge/License-MIT-success)
 
 Author a threat detection **once** in [Sigma](https://github.com/SigmaHQ/sigma) YAML; a
@@ -17,24 +17,35 @@ peer-reviewed, unit-tested, and mapped to MITRE ATT&CK.
 
 > **Why this is more than a script:** No official `pysigma-backend-wazuh` exists on PyPI,
 > so `scripts/compile_sigma.py` is a **from-scratch compiler**. It walks the Sigma
-> detection AST, distributes it into disjunctive normal form, applies **De Morgan's law**
-> to negations, merges same-field literals into Wazuh PCRE2 (lookahead conjunction for
-> positives, alternation for negatives), emits case-insensitive `(?i)` matches to mirror
-> Sigma semantics, and resolves Sigma field names through an external `field_mappings.yaml`
-> — covered by 41 unit tests. For a stage-by-stage trace of how one real rule becomes
+> detection AST, distributes it into disjunctive normal form (capped at 500 DNF clauses —
+> `MAX_AND_CLAUSE_PRODUCT` — so a pathologically OR-heavy rule fails the build loudly
+> instead of hanging or exhausting memory), applies **De Morgan's law** to negations,
+> merges same-field literals into Wazuh PCRE2 (lookahead conjunction for positives,
+> alternation for negatives), emits case-insensitive `(?i)` matches to mirror Sigma
+> semantics, and resolves Sigma field names through an external `field_mappings.yaml`
+> — covered by 63 unit tests. For a stage-by-stage trace of how one real rule becomes
 > Wazuh PCRE2 XML — AST, DNF, De Morgan, the PCRE2 merge, and the honest scope limits —
 > see [`docs/COMPILER.md`](docs/COMPILER.md).
+>
+> A companion tool, [`scripts/sigmahq_coverage.py`](scripts/sigmahq_coverage.py), measures
+> how much of the upstream [SigmaHQ](https://github.com/SigmaHQ/sigma) ruleset this
+> compiler already handles — see [Importing from SigmaHQ](#importing-from-sigmahq) below.
 
 ## 30-second tour
 
 ```bash
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-make all        # clean → compile Sigma → validate IDs → run tests (41 passing)
+make all        # clean → compile Sigma → validate IDs → run tests (63 passing)
 ```
 
-`make all` compiles the 3 example Sigma rules into 14 Wazuh rules (one rule fans out to 12
-via DNF distribution), validates every ID and Sigma↔Wazuh UUID link, and runs the suite.
+`make all` compiles the current **58** Sigma rules (3 hand-authored examples + 55 imported
+from SigmaHQ) into **216** Wazuh rules — some rules fan out to multiple Wazuh IDs via DNF
+distribution (`sysmon_wmic_xsl_bypass.yml` alone compiles to 12) — validates every ID and
+Sigma↔Wazuh UUID link, and runs the suite. Detection coverage currently spans **119
+distinct MITRE ATT&CK techniques across all 14 tactics**; see
+[`docs/COVERAGE.md`](docs/COVERAGE.md) for the full per-rule breakdown against the pinned
+upstream SigmaHQ ref.
 
 ## Architecture
 
@@ -86,30 +97,42 @@ flowchart LR
 │   │   └── pip-audit.yml           # dependency CVE scanning
 │   └── dependabot.yml              # weekly pip + github-actions updates (grouped)
 ├── rules/sigma/*.yml               # Sigma detection rules (source of truth)
+│   └── sigmahq/*.yml               # curated imports from SigmaHQ (DRL 1.1 — see below)
 ├── build/wazuh/*.xml               # Compiled Wazuh rules (gitignored, regenerated)
 ├── scripts/
 │   ├── validate_sigma.py           # sigma-cli syntax validation
 │   ├── compile_sigma.py            # Sigma AST → Wazuh PCRE2 XML compiler
 │   ├── check_rule_ids.py           # ID conventions + Sigma↔Wazuh UUID linkage
-│   └── deploy_rule.py              # Bundles + deploys rules to a Wazuh manager
+│   ├── deploy_rule.py              # Bundles + deploys rules to a Wazuh manager
+│   └── sigmahq_coverage.py         # fetch/report/import against upstream SigmaHQ
+├── docs/
+│   ├── COMPILER.md                 # guided trace through the compiler internals
+│   └── COVERAGE.md                 # generated: per-rule compile status vs. SigmaHQ
 ├── templates/wazuh_rule.xml.j2     # Jinja2 template for Wazuh XML output
 ├── field_mappings.yaml             # Sigma field name → Wazuh decoder field name
 ├── id_registry.json                # sigma_uuid → wazuh_id (must be committed)
-├── pipeline.yaml                   # Central path/deploy config
+├── pipeline.yaml                   # Central path/deploy/SigmaHQ-import config
 ├── configs/agent.conf              # Wazuh agent group config (deployed with rules)
 ├── requirements.in                 # direct dependencies (source of truth)
 ├── requirements.txt                # pip-compile-generated lock
+├── THIRD_PARTY_NOTICES.md          # DRL 1.1 licensing for imported SigmaHQ rules
 ├── SECURITY.md · CONTRIBUTING.md   # disclosure policy · contributor guide
 └── tests/                          # pytest suite + deliberately-broken fixtures
 ```
 
 ## Example detections
 
+Three hand-authored rules illustrate the compiler's core mechanics:
+
 | Sigma rule | Wazuh ID(s) | Level | MITRE ATT&CK | Description |
 |---|---|---|---|---|
 | `lnx_clear_cmd_history.yml` | 200000 | high | T1070.003 | `.bash_history` modified or cleared (defense evasion) |
 | `sysmon_certutil_download.yml` | 200001 | high | T1105 | `certutil.exe` with `urlcache`/`split` to download files (LOLBin) |
 | `sysmon_wmic_xsl_bypass.yml` | 200005–200016 | high | T1220 | `wmic os get /format:` with a remote/local `.xsl` payload — AppLocker bypass. Compiles to **12** Wazuh rules: the compiler distributes its nested OR conditions into DNF, one rule per alternative. |
+
+The remaining 55 rules are curated imports from SigmaHQ — see
+[Importing from SigmaHQ](#importing-from-sigmahq) below and
+[`docs/COVERAGE.md`](docs/COVERAGE.md) for the full catalog.
 
 ## Prerequisites
 
@@ -131,7 +154,7 @@ pre-commit install                                  # local hooks: validators + 
 python scripts/validate_sigma.py   # Sigma syntax (sigma-cli)
 python scripts/compile_sigma.py    # Sigma → build/wazuh/*.xml
 python scripts/check_rule_ids.py   # ID conventions + Sigma↔Wazuh linkage
-pytest -v tests/                   # 41 tests covering compiler + deploy
+pytest -v tests/                   # 63 tests covering compiler + deploy + coverage tool
 # or simply:  make all
 ```
 
@@ -169,6 +192,33 @@ Then `make compile` — the compiler auto-assigns a Wazuh ID (≥ 200000), write
 
 > **Always commit `id_registry.json`** alongside a new rule — the compiler rewrites it, and
 > forgetting leaves IDs unstable across CI runs.
+
+### Importing from SigmaHQ
+
+`scripts/sigmahq_coverage.py` measures how much of the upstream
+[SigmaHQ](https://github.com/SigmaHQ/sigma) ruleset this compiler can already handle, and
+optionally imports a curated selection of the rules that compile clean:
+
+```bash
+python scripts/sigmahq_coverage.py fetch --ref r2026-04-01   # sparse-clone the pinned scope
+python scripts/sigmahq_coverage.py report --ref r2026-04-01  # writes docs/COVERAGE.md
+python scripts/sigmahq_coverage.py import --ref r2026-04-01 --allow uuids.txt --apply
+```
+
+- **`fetch`** sparse-clones only the scoped upstream path (`rules/windows/process_creation`,
+  configured in `pipeline.yaml`) into the gitignored `build/sigmahq_cache/` — nothing
+  upstream is vendored into git history.
+- **`report`** runs every rule in scope through the *same* fail-loud checks
+  `compile_sigma.py` uses for real, and buckets each as clean / unmapped-field / failed by
+  whichever construct blocked it — see [`docs/COVERAGE.md`](docs/COVERAGE.md) for the
+  current numbers.
+- **`import`** copies only rules that verifiably compiled clean into
+  `rules/sigma/sigmahq/`, with a provenance header (source path, pinned ref/commit, import
+  date). It refuses to bulk-import the entire clean bucket — `--limit` and/or `--allow`
+  must narrow the selection to a human-reviewed set.
+
+SigmaHQ ships under the **Detection Rule License (DRL) 1.1**, not this repo's MIT license
+— see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ### Deploy to a Wazuh manager
 
