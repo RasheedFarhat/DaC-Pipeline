@@ -127,7 +127,6 @@ def assert_wazuh_result_ok(response: requests.Response, action: str) -> None:
             f"Wazuh API reported failure while {action}: {body.get('message', body)}"
         )
 
-# THE FIX: Added dry_run parameter and offline token fallback
 def get_token(settings: Settings, tls_verify: Union[bool, str], dry_run: bool = False) -> str:
     if not settings.wazuh_user or not settings.wazuh_password:
         if dry_run:
@@ -232,13 +231,18 @@ def deploy_rules(token: str, settings: Settings, tls_verify: Union[bool, str], d
 
     return True
 
-# THE FIX: Added offline token check to bypass remote state query
-def reconcile_state(token: str, settings: Settings, tls_verify: Union[bool, str], dry_run: bool = False) -> None:
+def reconcile_state(token: str, settings: Settings, tls_verify: Union[bool, str], dry_run: bool = False) -> bool:
+    """Delete remote rules superseded or orphaned by this deploy.
+
+    Returns True on success (including "nothing to do"), False if the remote
+    state could not be read or any delete failed -- the caller must surface that
+    as a failed deploy instead of exiting 0 with stale rules still live.
+    """
     logger.info("Reconciling State (Detecting and deleting orphaned rules)...")
 
     if token == "OFFLINE_DRY_RUN_TOKEN":
         logger.info("[DRY RUN] API is offline. Skipping remote orphan reconciliation.")
-        return
+        return True
 
     IGNORE_FILES: Set[str] = {"local_rules.xml"}
     try:
@@ -261,7 +265,7 @@ def reconcile_state(token: str, settings: Settings, tls_verify: Union[bool, str]
 
         if not orphaned_files:
             logger.info("State matches. No orphaned rules to delete.")
-            return
+            return True
 
         # Per-rule files from a previous (pre-bundle) deploy share their names with the
         # current build output, because rule IDs are stable via id_registry.json. They
@@ -300,18 +304,22 @@ def reconcile_state(token: str, settings: Settings, tls_verify: Union[bool, str]
                 logger.info(f"Deleted orphaned rule: {filename}")
     except requests.exceptions.RequestException as e:
         logger.error(f"Error during state reconciliation (Network/API): {e}")
+        return False
     except ValueError as e:
         logger.error(f"Error parsing state reconciliation response: {e}")
+        return False
+    return True
 
-def deploy_agent_conf(token: str, settings: Settings, tls_verify: Union[bool, str], dry_run: bool = False) -> None:
+def deploy_agent_conf(token: str, settings: Settings, tls_verify: Union[bool, str], dry_run: bool = False) -> bool:
+    """Push agent.conf to the target group. Returns False on API failure."""
     logger.info(f"Deploying {settings.agent_conf_path} to Wazuh group: '{settings.target_group}'...")
     if not os.path.exists(settings.agent_conf_path):
         logger.warning(f"{settings.agent_conf_path} not found. Skipping agent.conf deployment.")
-        return
+        return True
 
     if dry_run:
         logger.info("[DRY RUN] Would update agent.conf (Diffing agent.conf is unsupported via API).")
-        return
+        return True
 
     with open(settings.agent_conf_path, 'r') as f:
         conf_content: str = f.read()
@@ -324,10 +332,13 @@ def deploy_agent_conf(token: str, settings: Settings, tls_verify: Union[bool, st
     }
 
     try:
-        authed_request('PUT', url, settings, tls_verify, token, headers=headers, data=conf_content)
+        response, token = authed_request('PUT', url, settings, tls_verify, token, headers=headers, data=conf_content)
+        assert_wazuh_result_ok(response, "deploying agent.conf")
         logger.info("Successfully deployed agent.conf")
     except requests.exceptions.RequestException as e:
         logger.error(f"Error deploying agent.conf (Network/API): {e}")
+        return False
+    return True
 
 def restart_manager(token: str, settings: Settings, tls_verify: Union[bool, str]) -> None:
     logger.info("Restarting Wazuh Manager to apply changes...")
@@ -339,7 +350,6 @@ def restart_manager(token: str, settings: Settings, tls_verify: Union[bool, str]
         logger.error(f"CRITICAL: Network/HTTP error restarting manager: {e}")
         sys.exit(1)
 
-# THE FIX: Ensure args.dry_run is passed into get_token
 def main() -> None:
     parser = argparse.ArgumentParser(description="Deploy Wazuh Rules via API")
     parser.add_argument("--dry-run", action="store_true", help="Simulate deployment without making changes")
@@ -358,13 +368,25 @@ def main() -> None:
         logger.error("CRITICAL: One or more rules failed to deploy. Halting pipeline.")
         sys.exit(1)
 
-    reconcile_state(token, settings, tls_verify, args.dry_run)
-    deploy_agent_conf(token, settings, tls_verify, args.dry_run)
+    reconcile_ok: bool = reconcile_state(token, settings, tls_verify, args.dry_run)
+    agent_conf_ok: bool = deploy_agent_conf(token, settings, tls_verify, args.dry_run)
 
+    # The bundle was already PUT, so the manager must still restart to load it --
+    # even if reconciliation or agent.conf failed. Restart first, then report the
+    # partial failure with a non-zero exit so the pipeline never calls this a success.
     if args.dry_run:
         logger.info("Skipping SIEM Restart (Dry Run Complete).")
     else:
         restart_manager(token, settings, tls_verify)
+
+    if not (reconcile_ok and agent_conf_ok):
+        failed_steps = [
+            name for name, ok in
+            [("orphan reconciliation", reconcile_ok), ("agent.conf deployment", agent_conf_ok)]
+            if not ok
+        ]
+        logger.error(f"CRITICAL: Deploy finished with failures: {', '.join(failed_steps)}.")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
