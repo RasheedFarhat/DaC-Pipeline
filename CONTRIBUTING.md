@@ -29,8 +29,10 @@ make install-hooks   # pre-push: tests + compile + validate, before a broken pus
 
 - **Commits:** Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `ci:`).
 - **Rule IDs:** Wazuh custom IDs are auto-assigned and must be ≥ 200000; never hand-edit them.
-- **Field mappings:** new Sigma→Wazuh field names go in `FIELD_MAPPINGS` in
-  `scripts/compile_sigma.py`.
-- **Types:** code is type-hinted and checked with `mypy` via pre-commit; keep it clean.
+- **Field mappings:** new Sigma→Wazuh field names go in `field_mappings.yaml` — the
+  compiler loads it at startup; an unmapped field compiles but never fires.
+- **Types:** code is type-hinted and checked with `mypy` via pre-commit and a CI step
+  (`mypy --ignore-missing-imports scripts/`); keep it clean.
 - **Tests:** add coverage for new compiler behavior in `tests/test_compile_sigma.py`.
-- **Secrets:** never commit credentials. See [`SECURITY.md`](SECURITY.md).
+- **Secrets:** never commit credentials — in code *or* documentation. See
+  [`SECURITY.md`](SECURITY.md).
