@@ -9,7 +9,7 @@ from unittest.mock import patch
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../scripts')))
 from deploy_rule import (
     safe_api_request, deploy_rules, reconcile_state, deploy_agent_conf,
-    Settings, authed_request, get_token, get_tls_strategy,
+    Settings, authed_request, get_token, get_tls_strategy, load_settings,
 )
 
 # --- Constants for Testing ---
@@ -54,6 +54,26 @@ def test_get_token_real_deploy_without_credentials_exits_with_clear_error():
     settings = _settings_no_credentials()
     with pytest.raises(SystemExit):
         get_token(settings, tls_verify=True, dry_run=False)
+
+# --- Config precedence: env vars must beat pipeline.yaml --------------------------
+
+def test_env_var_overrides_pipeline_yaml_api_url(monkeypatch):
+    """The documented contract is env / .env > pipeline.yaml > defaults. Passing
+    the yaml values as Settings(**kwargs) silently inverted this (constructor
+    kwargs have the highest priority in pydantic-settings), so WAZUH_API_URL in
+    the environment could never override pipeline.yaml's api_url -- observed live:
+    a dry-run pointed at 127.0.0.1 kept authenticating against localhost."""
+    monkeypatch.setenv("WAZUH_API_URL", "https://env-wins.example:55000")
+    settings = load_settings()
+    assert settings.wazuh_api_url == "https://env-wins.example:55000"
+
+
+def test_pipeline_yaml_still_applies_when_env_unset(monkeypatch):
+    """Without an env override, pipeline.yaml's value is used (not the field default)."""
+    monkeypatch.delenv("WAZUH_API_URL", raising=False)
+    settings = load_settings()
+    assert settings.wazuh_api_url == "https://localhost:55000"  # pipeline.yaml deploy.api_url
+
 
 # --- TLS strategy: fail loud on misconfig, tolerate empty env strings -------------
 

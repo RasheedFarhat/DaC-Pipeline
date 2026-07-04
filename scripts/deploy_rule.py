@@ -49,23 +49,33 @@ class Settings(BaseSettings):
         return v
 
 def load_settings() -> Settings:
-    config_data: Dict[str, Any] = {}
+    yaml_values: Dict[str, Any] = {}
     try:
         with open("pipeline.yaml", "r") as f:
             loaded = yaml.safe_load(f)
             if loaded:
-                config_data['wazuh_dir'] = loaded.get('build', {}).get('wazuh_dir', 'build/wazuh')
-                config_data['agent_conf_path'] = loaded.get('deploy', {}).get('agent_conf_path', 'configs/agent.conf')
-                config_data['target_group'] = loaded.get('deploy', {}).get('target_group', 'default')
-                config_data['wazuh_api_url'] = loaded.get('deploy', {}).get('api_url', 'https://localhost:55000')
+                yaml_values['wazuh_dir'] = loaded.get('build', {}).get('wazuh_dir', 'build/wazuh')
+                yaml_values['agent_conf_path'] = loaded.get('deploy', {}).get('agent_conf_path', 'configs/agent.conf')
+                yaml_values['target_group'] = loaded.get('deploy', {}).get('target_group', 'default')
+                yaml_values['wazuh_api_url'] = loaded.get('deploy', {}).get('api_url', 'https://localhost:55000')
     except FileNotFoundError:
         logger.warning("pipeline.yaml not found. Relying strictly on environment variables and defaults.")
 
     try:
-        return Settings(**config_data)
+        settings = Settings()
     except ValidationError as e:
         logger.error(f"CRITICAL: Configuration Validation Failed! Missing or invalid environment variables.\n{e}")
         sys.exit(1)
+
+    # pydantic-settings gives constructor kwargs the HIGHEST priority, so passing
+    # the pipeline.yaml values into Settings(**...) made them impossible to
+    # override from the environment -- the documented contract is the opposite
+    # ("env vars win"). Instead, apply yaml values only to fields no env source
+    # set, giving the intended precedence: env / .env > pipeline.yaml > defaults.
+    for key, value in yaml_values.items():
+        if key not in settings.model_fields_set:
+            setattr(settings, key, value)
+    return settings
 
 def get_tls_strategy(settings: Settings) -> Union[bool, str]:
     if settings.wazuh_ca_bundle:
