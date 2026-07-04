@@ -7,7 +7,10 @@ from unittest.mock import patch
 
 # Add the scripts directory to the path so we can import our deployment script
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../scripts')))
-from deploy_rule import safe_api_request, deploy_rules, reconcile_state, Settings, authed_request, get_token
+from deploy_rule import (
+    safe_api_request, deploy_rules, reconcile_state, deploy_agent_conf,
+    Settings, authed_request, get_token,
+)
 
 # --- Constants for Testing ---
 TEST_URL = 'https://localhost:55000/test_endpoint'
@@ -219,7 +222,7 @@ def test_reconcile_state_deletes_orphaned_file_on_real_success():
     delete_url = "https://localhost:55000/rules/files/orphan.xml"
     responses.add(responses.DELETE, delete_url, status=200, json={"error": 0, "total_failed_items": 0})
 
-    reconcile_state("TOKEN", _settings("/nonexistent"), False, dry_run=False)
+    assert reconcile_state("TOKEN", _settings("/nonexistent"), False, dry_run=False) is True
 
     delete_calls = [c for c in responses.calls if c.request.method == "DELETE"]
     assert len(delete_calls) == 1
@@ -242,11 +245,63 @@ def test_reconcile_state_does_not_log_success_when_delete_body_reports_failure()
     )
 
     with patch("deploy_rule.logger") as mock_logger:
-        reconcile_state("TOKEN", _settings("/nonexistent"), False, dry_run=False)
+        result = reconcile_state("TOKEN", _settings("/nonexistent"), False, dry_run=False)
 
         success_logs = [c for c in mock_logger.info.call_args_list if "Deleted orphaned rule" in str(c)]
         assert success_logs == [], "must not log a false success for a delete that failed"
         assert mock_logger.error.called, "the body-level failure must surface as an error"
+    assert result is False, "a failed delete must report reconciliation failure to main()"
+
+
+# --- Partial-failure reporting: reconcile/agent.conf failures must not exit 0 ----
+
+@responses.activate
+def test_reconcile_state_returns_false_when_remote_listing_fails():
+    """If the remote rule listing can't even be read, reconciliation didn't happen --
+    the deploy must not be reported as a clean success."""
+    responses.add(responses.GET, RULES_LIST_URL, status=403)
+
+    assert reconcile_state("TOKEN", _settings("/nonexistent"), False, dry_run=False) is False
+
+
+@responses.activate
+def test_deploy_agent_conf_returns_false_on_api_error(tmp_path):
+    """An agent.conf push that fails server-side must surface as a failed step,
+    not a log line the pipeline scrolls past while exiting 0."""
+    conf = tmp_path / "agent.conf"
+    conf.write_text("<agent_config/>")
+    settings = Settings(wazuh_user="u", wazuh_password="p", agent_conf_path=str(conf))
+
+    conf_url = "https://localhost:55000/groups/default/configuration"
+    responses.add(responses.PUT, conf_url, status=400)
+
+    assert deploy_agent_conf("TOKEN", settings, False, dry_run=False) is False
+
+
+@responses.activate
+def test_deploy_agent_conf_returns_false_on_body_level_failure(tmp_path):
+    """Same HTTP-200-but-body-says-error shape as the rules endpoints: a 200 with
+    error:1 in the body means the config was NOT applied."""
+    conf = tmp_path / "agent.conf"
+    conf.write_text("<agent_config/>")
+    settings = Settings(wazuh_user="u", wazuh_password="p", agent_conf_path=str(conf))
+
+    conf_url = "https://localhost:55000/groups/default/configuration"
+    responses.add(responses.PUT, conf_url, status=200, json={"error": 1, "message": "Invalid configuration"})
+
+    assert deploy_agent_conf("TOKEN", settings, False, dry_run=False) is False
+
+
+@responses.activate
+def test_deploy_agent_conf_returns_true_on_success(tmp_path):
+    conf = tmp_path / "agent.conf"
+    conf.write_text("<agent_config/>")
+    settings = Settings(wazuh_user="u", wazuh_password="p", agent_conf_path=str(conf))
+
+    conf_url = "https://localhost:55000/groups/default/configuration"
+    responses.add(responses.PUT, conf_url, status=200, json={"error": 0})
+
+    assert deploy_agent_conf("TOKEN", settings, False, dry_run=False) is True
 
 
 # --- 401 token refresh -----------------------------------------------------------
