@@ -175,19 +175,16 @@ def test_select_import_candidates_respects_limit():
     assert [c.source_path for c in candidates] == ["a.yml", "b.yml"]
 
 
-def test_select_import_candidates_allow_filters_by_uuid_or_filename():
+def test_select_import_candidates_allow_filters_by_uuid_or_filename(tmp_path):
     results = [
         RuleResult("a.yml", "A", "clean", "", uuid="uuid-a", yaml_text="title: A\n"),
         RuleResult("b.yml", "B", "clean", "", uuid="uuid-b", yaml_text="title: B\n"),
     ]
-    allow_path = "/tmp/allow_test.txt"
-    with open(allow_path, "w") as f:
-        f.write("uuid-a\n")
-    try:
-        candidates = select_import_candidates(results, "/nonexistent", allow_path=allow_path, require_selector=True)
-        assert [c.source_path for c in candidates] == ["a.yml"]
-    finally:
-        os.remove(allow_path)
+    allow_path = tmp_path / "allow.txt"
+    allow_path.write_text("uuid-a\n")
+
+    candidates = select_import_candidates(results, "/nonexistent", allow_path=str(allow_path), require_selector=True)
+    assert [c.source_path for c in candidates] == ["a.yml"]
 
 
 def test_select_import_candidates_dedupes_already_imported_uuid(tmp_path):
