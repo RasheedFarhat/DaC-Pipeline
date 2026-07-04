@@ -262,9 +262,12 @@ would expand past 10 Wazuh rule IDs) so no single import dominates the ruleset.
 These are known and **not** currently mitigated in-repo; they are listed so the gap
 is explicit rather than implied-safe:
 
-- **`--dry-run` remote diff is unverified against a live manager.** If the API
-  response shape differs from the two cases handled, the diff silently treats all
-  remote rules as new. Tracked future work (also noted in the README).
+- ~~**`--dry-run` remote diff is unverified against a live manager.**~~ **Resolved
+  2026-07-04:** validated against a live v4.9.0 manager, and the feared failure mode
+  was real — the original parse read a `path` key the live `GET /rules/files` never
+  returns, so the remote state always parsed as empty and orphan reconciliation was
+  silently dead. Fixed to key on `relative_dirname` (the field the API actually
+  returns), with regression tests pinned to the captured live response shape.
 - **Self-hosted CD runner is a trusted host.** A compromise of that machine
   exposes the Wazuh credentials in the `deploy` job's environment. Hardening the
   runner host is outside this repo.

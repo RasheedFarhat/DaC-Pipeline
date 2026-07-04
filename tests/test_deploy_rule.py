@@ -9,7 +9,7 @@ from unittest.mock import patch
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../scripts')))
 from deploy_rule import (
     safe_api_request, deploy_rules, reconcile_state, deploy_agent_conf,
-    Settings, authed_request, get_token,
+    Settings, authed_request, get_token, get_tls_strategy, load_settings,
 )
 
 # --- Constants for Testing ---
@@ -54,6 +54,50 @@ def test_get_token_real_deploy_without_credentials_exits_with_clear_error():
     settings = _settings_no_credentials()
     with pytest.raises(SystemExit):
         get_token(settings, tls_verify=True, dry_run=False)
+
+# --- Config precedence: env vars must beat pipeline.yaml --------------------------
+
+def test_env_var_overrides_pipeline_yaml_api_url(monkeypatch):
+    """The documented contract is env / .env > pipeline.yaml > defaults. Passing
+    the yaml values as Settings(**kwargs) silently inverted this (constructor
+    kwargs have the highest priority in pydantic-settings), so WAZUH_API_URL in
+    the environment could never override pipeline.yaml's api_url -- observed live:
+    a dry-run pointed at 127.0.0.1 kept authenticating against localhost."""
+    monkeypatch.setenv("WAZUH_API_URL", "https://env-wins.example:55000")
+    settings = load_settings()
+    assert settings.wazuh_api_url == "https://env-wins.example:55000"
+
+
+def test_pipeline_yaml_still_applies_when_env_unset(monkeypatch):
+    """Without an env override, pipeline.yaml's value is used (not the field default)."""
+    monkeypatch.delenv("WAZUH_API_URL", raising=False)
+    settings = load_settings()
+    assert settings.wazuh_api_url == "https://localhost:55000"  # pipeline.yaml deploy.api_url
+
+
+# --- TLS strategy: fail loud on misconfig, tolerate empty env strings -------------
+
+def test_get_tls_strategy_exits_when_ca_bundle_missing():
+    """A configured-but-missing CA bundle must halt the deploy, not silently fall
+    back to the system trust store the operator never chose."""
+    settings = Settings(_env_file=None, wazuh_ca_bundle="/nonexistent/ca.pem")  # type: ignore[call-arg]
+    with pytest.raises(SystemExit):
+        get_tls_strategy(settings)
+
+
+def test_get_tls_strategy_returns_existing_ca_bundle(tmp_path):
+    bundle = tmp_path / "ca.pem"
+    bundle.write_text("dummy pem")
+    settings = Settings(_env_file=None, wazuh_ca_bundle=str(bundle))  # type: ignore[call-arg]
+    assert get_tls_strategy(settings) == str(bundle)
+
+
+def test_empty_verify_tls_string_defaults_to_verify():
+    """An unset GitHub Actions secret arrives as an empty-string env var. That must
+    mean "use the secure default" (verify on), not a bool-parsing ValidationError."""
+    settings = Settings(_env_file=None, wazuh_verify_tls="")  # type: ignore[call-arg]
+    assert settings.wazuh_verify_tls is True
+
 
 @responses.activate
 def test_safe_api_request_success():
@@ -211,13 +255,21 @@ def test_deploy_rules_put_body_error_is_not_treated_as_success(tmp_path):
 RULES_LIST_URL = "https://localhost:55000/rules/files"
 
 
+# The affected_items shape below ({"filename", "relative_dirname", "status"}) is
+# pinned to the REAL response captured from a live Wazuh v4.9.0 manager. The
+# previous mocks used a speculative {"filename", "path"} shape that v4.9 never
+# sends -- so these tests passed while live reconciliation silently parsed zero
+# remote files and never detected an orphan.
+
 @responses.activate
 def test_reconcile_state_deletes_orphaned_file_on_real_success():
     """Sanity check: a genuinely successful DELETE (200, error:0) is still logged
     and doesn't raise -- the body check must not reject legitimate successes."""
     responses.add(
         responses.GET, RULES_LIST_URL, status=200,
-        json={"data": {"affected_items": [{"filename": "orphan.xml", "path": "etc/rules/orphan.xml"}]}},
+        json={"data": {"affected_items": [
+            {"filename": "orphan.xml", "relative_dirname": "etc/rules", "status": "enabled"},
+        ]}},
     )
     delete_url = "https://localhost:55000/rules/files/orphan.xml"
     responses.add(responses.DELETE, delete_url, status=200, json={"error": 0, "total_failed_items": 0})
@@ -235,7 +287,9 @@ def test_reconcile_state_does_not_log_success_when_delete_body_reports_failure()
     reconcile_state must not claim the orphan was deleted when it wasn't."""
     responses.add(
         responses.GET, RULES_LIST_URL, status=200,
-        json={"data": {"affected_items": [{"filename": "orphan.xml", "path": "etc/rules/orphan.xml"}]}},
+        json={"data": {"affected_items": [
+            {"filename": "orphan.xml", "relative_dirname": "etc/rules", "status": "enabled"},
+        ]}},
     )
     delete_url = "https://localhost:55000/rules/files/orphan.xml"
     responses.add(
@@ -254,6 +308,52 @@ def test_reconcile_state_does_not_log_success_when_delete_body_reports_failure()
 
 
 # --- Partial-failure reporting: reconcile/agent.conf failures must not exit 0 ----
+
+@responses.activate
+def test_reconcile_state_parses_live_v49_shape_and_spares_protected_files():
+    """Regression for the dead-reconciliation bug: against the full response shape
+    a live v4.9.0 manager actually returns (built-in ruleset/rules files plus
+    etc/rules customs), reconcile must see ONLY the etc/rules customs, ignore
+    local_rules.xml and the bundle itself, and delete just the true orphan.
+    The old 'path'-based parse returned an empty remote set here -- no orphan
+    would ever have been detected."""
+    responses.add(
+        responses.GET, RULES_LIST_URL, status=200,
+        json={"data": {"affected_items": [
+            {"filename": "0010-rules_config.xml", "relative_dirname": "ruleset/rules", "status": "enabled"},
+            {"filename": "0015-ossec_rules.xml", "relative_dirname": "ruleset/rules", "status": "enabled"},
+            {"filename": "local_rules.xml", "relative_dirname": "etc/rules", "status": "enabled"},
+            {"filename": "sigma_custom_rules.xml", "relative_dirname": "etc/rules", "status": "enabled"},
+            {"filename": "stale_orphan.xml", "relative_dirname": "etc/rules", "status": "enabled"},
+        ], "total_affected_items": 5, "failed_items": [], "total_failed_items": 0},
+            "error": 0},
+    )
+    delete_url = "https://localhost:55000/rules/files/stale_orphan.xml"
+    responses.add(responses.DELETE, delete_url, status=200, json={"error": 0, "total_failed_items": 0})
+
+    assert reconcile_state("TOKEN", _settings("/nonexistent"), False, dry_run=False) is True
+
+    delete_calls = [c for c in responses.calls if c.request.method == "DELETE"]
+    assert len(delete_calls) == 1
+    assert delete_calls[0].request.url == delete_url
+
+
+@responses.activate
+def test_reconcile_state_parses_legacy_path_shape():
+    """The pre-4.9 'path'/'file' keys are kept as a fallback; a response using
+    them must still be parsed rather than treated as an empty remote state."""
+    responses.add(
+        responses.GET, RULES_LIST_URL, status=200,
+        json={"data": {"affected_items": [
+            {"file": "orphan.xml", "path": "etc/rules/orphan.xml"},
+        ]}},
+    )
+    delete_url = "https://localhost:55000/rules/files/orphan.xml"
+    responses.add(responses.DELETE, delete_url, status=200, json={"error": 0, "total_failed_items": 0})
+
+    assert reconcile_state("TOKEN", _settings("/nonexistent"), False, dry_run=False) is True
+    assert len([c for c in responses.calls if c.request.method == "DELETE"]) == 1
+
 
 @responses.activate
 def test_reconcile_state_returns_false_when_remote_listing_fails():
