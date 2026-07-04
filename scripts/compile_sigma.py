@@ -69,7 +69,11 @@ FIELD_MAPPINGS = load_field_mappings(CONFIG["field_mappings"])
 
 env = Environment(
     loader=FileSystemLoader(TEMPLATE_DIR),
-    autoescape=select_autoescape(['xml', 'j2'])
+    autoescape=select_autoescape(['xml', 'j2']),
+    # Strip the {% for %}/{% if %} control lines from the output instead of
+    # leaving a blank line for each -- the XML is what reviewers download from CI.
+    trim_blocks=True,
+    lstrip_blocks=True,
 )
 template = env.get_template('wazuh_rule.xml.j2')
 

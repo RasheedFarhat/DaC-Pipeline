@@ -12,6 +12,11 @@ repos:
       - id: mypy
         additional_dependencies: [types-requests, types-PyYAML]
         args: [--ignore-missing-imports]
+        # Same scope as the CI gate (mypy scripts/). Checking tests/ together with
+        # scripts/ trips mypy's duplicate-module detection: tests import
+        # scripts.check_rule_ids while the file also resolves as top-level
+        # check_rule_ids (scripts/ has no __init__.py by design -- they're CLIs).
+        files: ^scripts/.*\.py$
 
   - repo: local
     hooks:

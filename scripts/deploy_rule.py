@@ -5,7 +5,7 @@ import logging
 import argparse
 import yaml
 from typing import Any, Dict, Set, Optional, Union, List, Tuple
-from pydantic import Field, ValidationError
+from pydantic import Field, ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception, before_sleep_log
 
@@ -38,27 +38,57 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file='.env', extra='ignore')
 
+    @field_validator("wazuh_verify_tls", mode="before")
+    @classmethod
+    def _empty_string_means_default(cls, v: Any) -> Any:
+        # An unset GitHub Actions secret arrives as an empty-string env var.
+        # Treat "" as "not configured" and keep the secure default (verify=True)
+        # instead of crashing on a bool-parsing ValidationError.
+        if isinstance(v, str) and v.strip() == "":
+            return True
+        return v
+
 def load_settings() -> Settings:
-    config_data: Dict[str, Any] = {}
+    yaml_values: Dict[str, Any] = {}
     try:
         with open("pipeline.yaml", "r") as f:
             loaded = yaml.safe_load(f)
             if loaded:
-                config_data['wazuh_dir'] = loaded.get('build', {}).get('wazuh_dir', 'build/wazuh')
-                config_data['agent_conf_path'] = loaded.get('deploy', {}).get('agent_conf_path', 'configs/agent.conf')
-                config_data['target_group'] = loaded.get('deploy', {}).get('target_group', 'default')
-                config_data['wazuh_api_url'] = loaded.get('deploy', {}).get('api_url', 'https://localhost:55000')
+                yaml_values['wazuh_dir'] = loaded.get('build', {}).get('wazuh_dir', 'build/wazuh')
+                yaml_values['agent_conf_path'] = loaded.get('deploy', {}).get('agent_conf_path', 'configs/agent.conf')
+                yaml_values['target_group'] = loaded.get('deploy', {}).get('target_group', 'default')
+                yaml_values['wazuh_api_url'] = loaded.get('deploy', {}).get('api_url', 'https://localhost:55000')
     except FileNotFoundError:
         logger.warning("pipeline.yaml not found. Relying strictly on environment variables and defaults.")
 
     try:
-        return Settings(**config_data)
+        settings = Settings()
     except ValidationError as e:
         logger.error(f"CRITICAL: Configuration Validation Failed! Missing or invalid environment variables.\n{e}")
         sys.exit(1)
 
+    # pydantic-settings gives constructor kwargs the HIGHEST priority, so passing
+    # the pipeline.yaml values into Settings(**...) made them impossible to
+    # override from the environment -- the documented contract is the opposite
+    # ("env vars win"). Instead, apply yaml values only to fields no env source
+    # set, giving the intended precedence: env / .env > pipeline.yaml > defaults.
+    for key, value in yaml_values.items():
+        if key not in settings.model_fields_set:
+            setattr(settings, key, value)
+    return settings
+
 def get_tls_strategy(settings: Settings) -> Union[bool, str]:
-    if settings.wazuh_ca_bundle and os.path.exists(settings.wazuh_ca_bundle):
+    if settings.wazuh_ca_bundle:
+        # A configured-but-missing bundle must not silently fall back to the system
+        # trust store: the operator asked for a specific CA, and proceeding without
+        # it either fails confusingly later (self-signed manager) or "works" while
+        # validating against roots the operator never chose.
+        if not os.path.isfile(settings.wazuh_ca_bundle):
+            logger.error(
+                f"CRITICAL: WAZUH_CA_BUNDLE is set but the file does not exist: "
+                f"{settings.wazuh_ca_bundle}"
+            )
+            sys.exit(1)
         return settings.wazuh_ca_bundle
     elif not settings.wazuh_verify_tls:
         import urllib3
@@ -255,9 +285,16 @@ def reconcile_state(token: str, settings: Settings, tls_verify: Union[bool, str]
             items = resp_json.get('data', {}).get('items', [])
 
         for item in items:
-            path: str = item.get('path', '')
+            # Confirmed against a live v4.9.0 manager: GET /rules/files items are
+            # {"filename": ..., "relative_dirname": "etc/rules"|"ruleset/rules",
+            # "status": ...}. The original parse read a 'path' key that v4.9 never
+            # sends, so every file was filtered out, the remote set always looked
+            # empty, and orphan reconciliation was silently dead -- a rule deleted
+            # from the repo stayed live on the manager forever. relative_dirname
+            # is authoritative; 'path'/'file' are kept as legacy fallbacks only.
+            location: str = item.get('relative_dirname') or item.get('path', '')
             filename: str = item.get('filename') or item.get('file', '')
-            if filename and filename.endswith('.xml') and 'etc/rules' in path:
+            if filename and filename.endswith('.xml') and 'etc/rules' in location:
                 remote_custom_files.add(filename)
 
         local_files: Set[str] = {BUNDLE_FILENAME}
