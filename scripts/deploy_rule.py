@@ -285,9 +285,16 @@ def reconcile_state(token: str, settings: Settings, tls_verify: Union[bool, str]
             items = resp_json.get('data', {}).get('items', [])
 
         for item in items:
-            path: str = item.get('path', '')
+            # Confirmed against a live v4.9.0 manager: GET /rules/files items are
+            # {"filename": ..., "relative_dirname": "etc/rules"|"ruleset/rules",
+            # "status": ...}. The original parse read a 'path' key that v4.9 never
+            # sends, so every file was filtered out, the remote set always looked
+            # empty, and orphan reconciliation was silently dead -- a rule deleted
+            # from the repo stayed live on the manager forever. relative_dirname
+            # is authoritative; 'path'/'file' are kept as legacy fallbacks only.
+            location: str = item.get('relative_dirname') or item.get('path', '')
             filename: str = item.get('filename') or item.get('file', '')
-            if filename and filename.endswith('.xml') and 'etc/rules' in path:
+            if filename and filename.endswith('.xml') and 'etc/rules' in location:
                 remote_custom_files.add(filename)
 
         local_files: Set[str] = {BUNDLE_FILENAME}

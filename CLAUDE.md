@@ -87,4 +87,4 @@ make ci
 
 **Adding a new Sigma field mapping** means adding a line to `field_mappings.yaml` (Sigma field name → Wazuh decoder field name). An unmapped field passes through unchanged and compiles to a rule that never fires.
 
-**The `--dry-run` remote diff** in `deploy_rule.py` has not been validated against a live Wazuh manager. If the API response shape differs, it silently treats all rules as new.
+**The remote reconcile diff is validated against a live Wazuh v4.9.0 manager** (2026-07-04). `GET /rules/files` items carry `relative_dirname` (not `path`); the parse keys on it, and the reconcile tests are pinned to the captured live response shape — keep them in sync if the API shape changes.

@@ -255,13 +255,21 @@ def test_deploy_rules_put_body_error_is_not_treated_as_success(tmp_path):
 RULES_LIST_URL = "https://localhost:55000/rules/files"
 
 
+# The affected_items shape below ({"filename", "relative_dirname", "status"}) is
+# pinned to the REAL response captured from a live Wazuh v4.9.0 manager. The
+# previous mocks used a speculative {"filename", "path"} shape that v4.9 never
+# sends -- so these tests passed while live reconciliation silently parsed zero
+# remote files and never detected an orphan.
+
 @responses.activate
 def test_reconcile_state_deletes_orphaned_file_on_real_success():
     """Sanity check: a genuinely successful DELETE (200, error:0) is still logged
     and doesn't raise -- the body check must not reject legitimate successes."""
     responses.add(
         responses.GET, RULES_LIST_URL, status=200,
-        json={"data": {"affected_items": [{"filename": "orphan.xml", "path": "etc/rules/orphan.xml"}]}},
+        json={"data": {"affected_items": [
+            {"filename": "orphan.xml", "relative_dirname": "etc/rules", "status": "enabled"},
+        ]}},
     )
     delete_url = "https://localhost:55000/rules/files/orphan.xml"
     responses.add(responses.DELETE, delete_url, status=200, json={"error": 0, "total_failed_items": 0})
@@ -279,7 +287,9 @@ def test_reconcile_state_does_not_log_success_when_delete_body_reports_failure()
     reconcile_state must not claim the orphan was deleted when it wasn't."""
     responses.add(
         responses.GET, RULES_LIST_URL, status=200,
-        json={"data": {"affected_items": [{"filename": "orphan.xml", "path": "etc/rules/orphan.xml"}]}},
+        json={"data": {"affected_items": [
+            {"filename": "orphan.xml", "relative_dirname": "etc/rules", "status": "enabled"},
+        ]}},
     )
     delete_url = "https://localhost:55000/rules/files/orphan.xml"
     responses.add(
@@ -298,6 +308,52 @@ def test_reconcile_state_does_not_log_success_when_delete_body_reports_failure()
 
 
 # --- Partial-failure reporting: reconcile/agent.conf failures must not exit 0 ----
+
+@responses.activate
+def test_reconcile_state_parses_live_v49_shape_and_spares_protected_files():
+    """Regression for the dead-reconciliation bug: against the full response shape
+    a live v4.9.0 manager actually returns (built-in ruleset/rules files plus
+    etc/rules customs), reconcile must see ONLY the etc/rules customs, ignore
+    local_rules.xml and the bundle itself, and delete just the true orphan.
+    The old 'path'-based parse returned an empty remote set here -- no orphan
+    would ever have been detected."""
+    responses.add(
+        responses.GET, RULES_LIST_URL, status=200,
+        json={"data": {"affected_items": [
+            {"filename": "0010-rules_config.xml", "relative_dirname": "ruleset/rules", "status": "enabled"},
+            {"filename": "0015-ossec_rules.xml", "relative_dirname": "ruleset/rules", "status": "enabled"},
+            {"filename": "local_rules.xml", "relative_dirname": "etc/rules", "status": "enabled"},
+            {"filename": "sigma_custom_rules.xml", "relative_dirname": "etc/rules", "status": "enabled"},
+            {"filename": "stale_orphan.xml", "relative_dirname": "etc/rules", "status": "enabled"},
+        ], "total_affected_items": 5, "failed_items": [], "total_failed_items": 0},
+            "error": 0},
+    )
+    delete_url = "https://localhost:55000/rules/files/stale_orphan.xml"
+    responses.add(responses.DELETE, delete_url, status=200, json={"error": 0, "total_failed_items": 0})
+
+    assert reconcile_state("TOKEN", _settings("/nonexistent"), False, dry_run=False) is True
+
+    delete_calls = [c for c in responses.calls if c.request.method == "DELETE"]
+    assert len(delete_calls) == 1
+    assert delete_calls[0].request.url == delete_url
+
+
+@responses.activate
+def test_reconcile_state_parses_legacy_path_shape():
+    """The pre-4.9 'path'/'file' keys are kept as a fallback; a response using
+    them must still be parsed rather than treated as an empty remote state."""
+    responses.add(
+        responses.GET, RULES_LIST_URL, status=200,
+        json={"data": {"affected_items": [
+            {"file": "orphan.xml", "path": "etc/rules/orphan.xml"},
+        ]}},
+    )
+    delete_url = "https://localhost:55000/rules/files/orphan.xml"
+    responses.add(responses.DELETE, delete_url, status=200, json={"error": 0, "total_failed_items": 0})
+
+    assert reconcile_state("TOKEN", _settings("/nonexistent"), False, dry_run=False) is True
+    assert len([c for c in responses.calls if c.request.method == "DELETE"]) == 1
+
 
 @responses.activate
 def test_reconcile_state_returns_false_when_remote_listing_fails():
