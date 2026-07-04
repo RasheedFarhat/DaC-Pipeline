@@ -268,12 +268,14 @@ is explicit rather than implied-safe:
 - **Self-hosted CD runner is a trusted host.** A compromise of that machine
   exposes the Wazuh credentials in the `deploy` job's environment. Hardening the
   runner host is outside this repo.
-- **Inert leaked string retained in history.** The `MyS3cr37P450r…` lab credential
-  remains visible in two historical commits. It is remediated by rotation (the value
-  is dead), and a history rewrite was deliberately declined (whole-repo blast radius
-  + GitHub SHA caching for a low-risk dead value). The gitleaks allowlist keeps those
-  two commits whitelisted to keep the scan green; it is scoped to those SHAs only.
-  (`WazuhDeploy2026!` was *never* committed — `.gitignore` caught it — so it is not
-  a history item at all.)
+- **Inert leaked strings retained in history.** Two dead credentials remain visible
+  in git history: the original `MyS3cr37P450r…` lab password (two commits, allowlisted
+  by SHA in `.gitleaks.toml`), and its replacement, which the first revision of the
+  remediation docs themselves quoted in prose (caught and rotated 2026-07-04 — see
+  `SECURITY.md`, exposure #2). Both are remediated by rotation; a history rewrite was
+  declined for both (whole-repo blast radius + GitHub SHA caching for low-risk dead
+  values). gitleaks never flagged the second exposure — it pattern-matches secret
+  assignments and token formats, not prose — which is why the standing policy is that
+  documentation never names credential values at all.
 - **`diskcache` `CVE-2025-69872`** is accepted via pip-audit ignore until pySigma
   ships a patched transitive dependency.
