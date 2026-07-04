@@ -94,6 +94,38 @@ def test_unparseable_yaml_bucketed_as_pysigma_parse_error():
     assert results[0].bucket == "pysigma_parse_error"
 
 
+def test_correlation_rule_bucketed_as_unsupported_rule_type():
+    """A Sigma correlation rule has no detection AST to walk. It must land in its
+    own bucket instead of crashing the classifier on a missing attribute -- and the
+    ordinary detection rule sharing the same file must still classify normally."""
+    yaml_text = (
+        "title: Base rule\n"
+        "id: 11111111-1111-1111-1111-111111111111\n"
+        "name: base\n"
+        "logsource:\n"
+        "    category: process_creation\n"
+        "    product: windows\n"
+        "detection:\n"
+        "    sel:\n"
+        "        CommandLine|contains: foo\n"
+        "    condition: sel\n"
+        "---\n"
+        "title: Correlation rule\n"
+        "id: 22222222-2222-2222-2222-222222222222\n"
+        "correlation:\n"
+        "    type: event_count\n"
+        "    rules:\n"
+        "        - base\n"
+        "    timespan: 5m\n"
+        "    condition:\n"
+        "        gte: 10\n"
+    )
+    results = classify_rule_text(yaml_text, "proc_creation_win_corr.yml")
+    buckets = {r.bucket for r in results}
+    assert "clean" in buckets
+    assert "unsupported_rule_type:SigmaCorrelationRule" in buckets
+
+
 # --- Report rendering -------------------------------------------------------------
 
 def test_render_report_headline_matches_counts():

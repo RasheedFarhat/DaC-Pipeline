@@ -42,7 +42,7 @@ make ci
 2. **`scripts/compile_sigma.py`** — the core compiler:
    - Walks Sigma rules in `rules/sigma/`, parses each via pySigma's `SigmaCollection`
    - Recursively evaluates the detection AST (`ConditionOR`, `ConditionAND`, `ConditionNOT`, leaf nodes)
-   - Maps Sigma field names to Wazuh field names via `FIELD_MAPPINGS` dict inside `evaluate_ast()`
+   - Maps Sigma field names to Wazuh field names via the external `field_mappings.yaml` (loaded at import into `FIELD_MAPPINGS`)
    - Renders each compiled rule via `templates/wazuh_rule.xml.j2` (Jinja2)
    - Writes output to `build/wazuh/` (gitignored — ephemeral build artifact)
    - Auto-assigns stable Wazuh rule IDs from `id_registry.json`; commits new entries back
@@ -68,11 +68,12 @@ make ci
 - Bundles all XML files in `build/wazuh/` into one file (`sigma_custom_rules.xml`) — this is intentional to avoid a Wazuh restart race condition
 - Reconciles remote state: deletes orphaned rules from Wazuh, with a hard abort if >5 rules would be deleted (blast radius safeguard)
 - Retries transient API failures (429, 5xx, connection errors) with exponential backoff via `tenacity`
-- Required env vars: `WAZUH_USER`, `WAZUH_PASSWORD`; optional: `WAZUH_API_URL`, `WAZUH_INSECURE`, `WAZUH_CA_BUNDLE`
+- Required env vars (real deploys only; dry-run runs credential-free): `WAZUH_USER`, `WAZUH_PASSWORD`; optional: `WAZUH_API_URL`, `WAZUH_VERIFY_TLS`, `WAZUH_CA_BUNDLE`
+- A failed orphan reconciliation or agent.conf push exits non-zero (after the manager restart, since the rules bundle was already PUT)
 
 ### CI/CD workflows
 
-- **`integrate_rulesets.yml`** — CI on push/PR to `main`/`dev`: tests → validate sigma → compile → validate IDs → upload artifact
+- **`integrate_rulesets.yml`** — CI on push/PR to `main`/`dev`: mypy → tests → validate sigma → compile → validate IDs → upload artifact
 - **`deploy.yml`** — CD via manual `workflow_dispatch` on a self-hosted runner: same steps + deploy to Wazuh
 - **`pr_dry_run.yml`** — runs `deploy_rule.py --dry-run` on PRs and posts the output as a comment
 
@@ -84,6 +85,6 @@ make ci
 
 **Wazuh rule IDs must be ≥ 200000.** IDs 0–99999 are Wazuh built-ins; 100000–199999 were previously used but are now reserved. `check_rule_ids.py` enforces this.
 
-**Adding a new Sigma field mapping** requires editing `FIELD_MAPPINGS` inside `evaluate_ast()` in `scripts/compile_sigma.py` (line ~97).
+**Adding a new Sigma field mapping** means adding a line to `field_mappings.yaml` (Sigma field name → Wazuh decoder field name). An unmapped field passes through unchanged and compiles to a rule that never fires.
 
 **The `--dry-run` remote diff** in `deploy_rule.py` has not been validated against a live Wazuh manager. If the API response shape differs, it silently treats all rules as new.

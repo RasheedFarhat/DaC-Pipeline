@@ -27,12 +27,11 @@ jobs:
       - name: Compile Rules
         run: python scripts/compile_sigma.py
 
+      # Deliberately NO Wazuh secrets here: --dry-run runs credential-free (offline
+      # mode) by design, and this job executes PR-modified code -- injecting the
+      # deploy credentials would hand them to any code change a PR proposes.
       - name: Execute Dry Run
         id: dry_run
-        env:
-          WAZUH_API_URL: ${{ secrets.WAZUH_API_URL }}
-          WAZUH_USER: ${{ secrets.WAZUH_USER }}
-          WAZUH_PASSWORD: ${{ secrets.WAZUH_PASSWORD }}
         run: |
           # Disable immediate exit on error to capture output
           set +e

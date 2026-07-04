@@ -284,7 +284,10 @@ def evaluate_ast(node: Any, rule: SigmaRule) -> List[Dict[str, List[Dict[str, An
         ends_with_wildcard = value.endswith(SpecialChars.WILDCARD_MULTI)
 
         parts = []
-        for part in value:
+        # value.s is SigmaString's canonical parts tuple (plain-string runs and
+        # SpecialChars); re.escape is per-character, so escaping whole runs emits
+        # the same pattern as escaping char-by-char.
+        for part in value.s:
             if part == SpecialChars.WILDCARD_MULTI:
                 parts.append(".*")
             elif part == SpecialChars.WILDCARD_SINGLE:
@@ -354,7 +357,16 @@ def main() -> None:
                 continue
 
             for rule in collection.rules:
-                # WE DELETED THE HARDCODED WAZUH_ID CHECK HERE!
+                # A Sigma correlation rule has no detection AST to walk. Reject it
+                # loudly, like every other unsupported construct, instead of
+                # crashing mid-compile on a missing attribute.
+                if not isinstance(rule, SigmaRule):
+                    logger.error(
+                        f"Unsupported rule type '{type(rule).__name__}' in {filename}: "
+                        f"only standard Sigma detection rules can be compiled."
+                    )
+                    skipped += 1
+                    continue
 
                 try:
                     assert_supported_constructs(rule)
