@@ -31,6 +31,7 @@ from typing import Any, Dict, List, Optional
 import yaml
 from sigma.collection import SigmaCollection
 from sigma.exceptions import SigmaError
+from sigma.rule import SigmaRule
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import compile_sigma as cs  # noqa: E402  (reuse the real fail-loud compile logic)
@@ -194,6 +195,17 @@ def classify_rule_text(yaml_text: str, source_path: str) -> List[RuleResult]:
 
     results: List[RuleResult] = []
     for rule in collection.rules:
+        # Correlation rules have no detection AST; compile_sigma.py rejects them
+        # the same way, so bucket them as an unsupported rule type.
+        if not isinstance(rule, SigmaRule):
+            results.append(RuleResult(
+                source_path, source_path,
+                f"unsupported_rule_type:{type(rule).__name__}",
+                "only standard Sigma detection rules can be compiled",
+                str(rule.id) if rule.id else None,
+            ))
+            continue
+
         uuid = str(rule.id) if rule.id else None
         title = rule.title or source_path
 
