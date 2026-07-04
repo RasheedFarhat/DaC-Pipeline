@@ -12,3 +12,23 @@ repos:
       - id: mypy
         additional_dependencies: [types-requests, types-PyYAML]
         args: [--ignore-missing-imports]
+        # Same scope as the CI gate (mypy scripts/). Checking tests/ together with
+        # scripts/ trips mypy's duplicate-module detection: tests import
+        # scripts.check_rule_ids while the file also resolves as top-level
+        # check_rule_ids (scripts/ has no __init__.py by design -- they're CLIs).
+        files: ^scripts/.*\.py$
+
+  - repo: local
+    hooks:
+      - id: validate-sigma
+        name: validate Sigma syntax
+        entry: python3 scripts/validate_sigma.py
+        language: system
+        pass_filenames: false
+        files: ^rules/sigma/.*\.ya?ml$
+      - id: check-rule-ids
+        name: compile + validate rule IDs
+        entry: bash -c 'python3 scripts/compile_sigma.py && python3 scripts/check_rule_ids.py'
+        language: system
+        pass_filenames: false
+        files: ^(rules/sigma/|scripts/compile_sigma\.py|templates/).*

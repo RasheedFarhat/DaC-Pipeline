@@ -2,8 +2,10 @@
   <rule id="{{ wazuh_id }}" level="{{ wazuh_level }}">
     <!-- sigma_uuid:{{ rule_id }} -->
     <if_group>{{ parent_group }}</if_group>
-    {% for field, value in fields.items() %}
-    <field name="{{ field }}" type="pcre2"{% if value.negate %} negate="yes"{% endif %}>{{ value.pattern }}</field>
+    {% for field, literals in fields.items() %}
+    {% for lit in literals %}
+    <field name="{{ field }}" type="pcre2"{% if lit.negate %} negate="yes"{% endif %}>{{ lit.pattern }}</field>
+    {% endfor %}
     {% endfor %}
     <description>{{ title }}</description>
     {% if tags %}

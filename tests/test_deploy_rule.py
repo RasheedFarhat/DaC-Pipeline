@@ -7,10 +7,97 @@ from unittest.mock import patch
 
 # Add the scripts directory to the path so we can import our deployment script
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../scripts')))
-from deploy_rule import safe_api_request, deploy_rules, Settings, authed_request
+from deploy_rule import (
+    safe_api_request, deploy_rules, reconcile_state, deploy_agent_conf,
+    Settings, authed_request, get_token, get_tls_strategy, load_settings,
+)
 
 # --- Constants for Testing ---
 TEST_URL = 'https://localhost:55000/test_endpoint'
+
+
+# --- Dry-run must work with zero configured credentials ---------------------------
+# It never authenticates for real, so it shouldn't need real (or even placeholder)
+# secrets. Previously Settings(wazuh_user=..., wazuh_password=...) had no defaults,
+# so building Settings() at all raised a Pydantic ValidationError before dry-run
+# ever got a chance to run -- confirmed against a clean env (env -i, no .env file).
+
+def _settings_no_credentials() -> Settings:
+    # _env_file=None disables pydantic-settings' .env lookup for this instance --
+    # without it, a real local .env (gitignored, present on dev machines) would
+    # leak real credentials into this "nothing configured" test and make it flaky.
+    return Settings(_env_file=None)  # type: ignore[call-arg]
+
+
+def test_settings_builds_with_no_credentials_configured():
+    """Settings() must not raise just because no credentials are configured --
+    that's the normal, expected state for dry-run."""
+    settings = _settings_no_credentials()
+    assert settings.wazuh_user is None
+    assert settings.wazuh_password is None
+
+
+@responses.activate
+def test_get_token_dry_run_without_credentials_never_touches_network():
+    """No WAZUH_USER/WAZUH_PASSWORD + dry-run must short-circuit straight to the
+    offline sentinel token, without attempting any HTTP call at all."""
+    settings = _settings_no_credentials()
+    token = get_token(settings, tls_verify=True, dry_run=True)
+    assert token == "OFFLINE_DRY_RUN_TOKEN"
+    assert len(responses.calls) == 0
+
+
+def test_get_token_real_deploy_without_credentials_exits_with_clear_error():
+    """A real (non-dry-run) deploy still can't proceed without credentials -- but
+    it must fail with a clear, explicit error instead of a bare Pydantic
+    ValidationError surfacing from deep inside Settings() construction."""
+    settings = _settings_no_credentials()
+    with pytest.raises(SystemExit):
+        get_token(settings, tls_verify=True, dry_run=False)
+
+# --- Config precedence: env vars must beat pipeline.yaml --------------------------
+
+def test_env_var_overrides_pipeline_yaml_api_url(monkeypatch):
+    """The documented contract is env / .env > pipeline.yaml > defaults. Passing
+    the yaml values as Settings(**kwargs) silently inverted this (constructor
+    kwargs have the highest priority in pydantic-settings), so WAZUH_API_URL in
+    the environment could never override pipeline.yaml's api_url -- observed live:
+    a dry-run pointed at 127.0.0.1 kept authenticating against localhost."""
+    monkeypatch.setenv("WAZUH_API_URL", "https://env-wins.example:55000")
+    settings = load_settings()
+    assert settings.wazuh_api_url == "https://env-wins.example:55000"
+
+
+def test_pipeline_yaml_still_applies_when_env_unset(monkeypatch):
+    """Without an env override, pipeline.yaml's value is used (not the field default)."""
+    monkeypatch.delenv("WAZUH_API_URL", raising=False)
+    settings = load_settings()
+    assert settings.wazuh_api_url == "https://localhost:55000"  # pipeline.yaml deploy.api_url
+
+
+# --- TLS strategy: fail loud on misconfig, tolerate empty env strings -------------
+
+def test_get_tls_strategy_exits_when_ca_bundle_missing():
+    """A configured-but-missing CA bundle must halt the deploy, not silently fall
+    back to the system trust store the operator never chose."""
+    settings = Settings(_env_file=None, wazuh_ca_bundle="/nonexistent/ca.pem")  # type: ignore[call-arg]
+    with pytest.raises(SystemExit):
+        get_tls_strategy(settings)
+
+
+def test_get_tls_strategy_returns_existing_ca_bundle(tmp_path):
+    bundle = tmp_path / "ca.pem"
+    bundle.write_text("dummy pem")
+    settings = Settings(_env_file=None, wazuh_ca_bundle=str(bundle))  # type: ignore[call-arg]
+    assert get_tls_strategy(settings) == str(bundle)
+
+
+def test_empty_verify_tls_string_defaults_to_verify():
+    """An unset GitHub Actions secret arrives as an empty-string env var. That must
+    mean "use the secure default" (verify on), not a bool-parsing ValidationError."""
+    settings = Settings(_env_file=None, wazuh_verify_tls="")  # type: ignore[call-arg]
+    assert settings.wazuh_verify_tls is True
+
 
 @responses.activate
 def test_safe_api_request_success():
@@ -96,6 +183,225 @@ def test_deploy_rules_bundles_complete_set(tmp_path):
     (build / "r1.xml").write_text('<group name="x">\n  <rule id="200001" level="10"/>\n</group>')
     (build / "r2.xml").write_text('<group name="y">\n  <rule id="200002" level="10"/>\n</group>')
     assert deploy_rules("OFFLINE_DRY_RUN_TOKEN", _settings(str(build)), False, dry_run=True) is True
+
+
+@responses.activate
+def test_deploy_rules_bundle_preserves_distinct_group_names(tmp_path):
+    """Bundling used to collapse every rule into one generic "custom_sigma" group,
+    silently discarding each rule's original product/service membership (e.g.
+    "windows, custom_sigma" vs "linux, custom_sigma") -- confirmed live that this
+    broke group:windows / group:linux filtering post-deploy. The bundle must emit
+    one <group name=...> block per distinct name, not collapse them."""
+    build = tmp_path / "build"
+    build.mkdir()
+    (build / "r1.xml").write_text('<group name="windows, custom_sigma">\n  <rule id="200001" level="10"/>\n</group>')
+    (build / "r2.xml").write_text('<group name="linux, custom_sigma">\n  <rule id="200002" level="10"/>\n</group>')
+    (build / "r3.xml").write_text('<group name="windows, custom_sigma">\n  <rule id="200003" level="10"/>\n</group>')
+
+    bundle_url = "https://localhost:55000/rules/files/sigma_custom_rules.xml"
+    responses.add(responses.PUT, bundle_url, json={"error": 0}, status=200)
+
+    assert deploy_rules("TOKEN", _settings(str(build)), False, dry_run=False) is True
+
+    sent_xml = responses.calls[0].request.body
+    assert isinstance(sent_xml, str)
+    assert sent_xml.count('<group name="windows, custom_sigma">') == 1
+    assert sent_xml.count('<group name="linux, custom_sigma">') == 1
+    assert 'id="200001"' in sent_xml and 'id="200002"' in sent_xml and 'id="200003"' in sent_xml
+    # Both rules 200001 and 200003 share the windows group -- must land in the SAME
+    # block, not two separate "windows, custom_sigma" blocks.
+    windows_block = sent_xml.split('<group name="windows, custom_sigma">')[1].split('</group>')[0]
+    assert 'id="200001"' in windows_block and 'id="200003"' in windows_block
+
+
+@responses.activate
+def test_deploy_rules_put_includes_overwrite_true(tmp_path):
+    """Without overwrite=true, the Wazuh API 200s but silently skips the write when the
+    bundle file already exists (confirmed against a live manager: HTTP 200, body
+    'error': 1, file on disk untouched). The PUT must always request overwrite=true."""
+    build = tmp_path / "build"
+    build.mkdir()
+    (build / "r1.xml").write_text('<group name="x">\n  <rule id="200001" level="10"/>\n</group>')
+
+    bundle_url = "https://localhost:55000/rules/files/sigma_custom_rules.xml"
+    responses.add(responses.PUT, bundle_url, json={"error": 0}, status=200)
+
+    assert deploy_rules("TOKEN", _settings(str(build)), False, dry_run=False) is True
+    assert len(responses.calls) == 1
+    assert responses.calls[0].request.url == bundle_url + "?overwrite=true"
+
+
+@responses.activate
+def test_deploy_rules_put_body_error_is_not_treated_as_success(tmp_path):
+    """overwrite=true fixes the "already exists" no-op, but Wazuh can still 200 a PUT
+    with a body-level failure for other reasons (confirmed live: this is the same
+    HTTP-200-but-body-says-error shape). deploy_rules must not log success or return
+    True when that happens."""
+    build = tmp_path / "build"
+    build.mkdir()
+    (build / "r1.xml").write_text('<group name="x">\n  <rule id="200001" level="10"/>\n</group>')
+
+    bundle_url = "https://localhost:55000/rules/files/sigma_custom_rules.xml"
+    responses.add(
+        responses.PUT, bundle_url, status=200,
+        json={"error": 1, "total_failed_items": 1, "message": "Rule content is invalid"},
+    )
+
+    assert deploy_rules("TOKEN", _settings(str(build)), False, dry_run=False) is False
+
+
+# --- Orphan reconciliation: DELETE must check the body, not just HTTP status -----
+
+RULES_LIST_URL = "https://localhost:55000/rules/files"
+
+
+# The affected_items shape below ({"filename", "relative_dirname", "status"}) is
+# pinned to the REAL response captured from a live Wazuh v4.9.0 manager. The
+# previous mocks used a speculative {"filename", "path"} shape that v4.9 never
+# sends -- so these tests passed while live reconciliation silently parsed zero
+# remote files and never detected an orphan.
+
+@responses.activate
+def test_reconcile_state_deletes_orphaned_file_on_real_success():
+    """Sanity check: a genuinely successful DELETE (200, error:0) is still logged
+    and doesn't raise -- the body check must not reject legitimate successes."""
+    responses.add(
+        responses.GET, RULES_LIST_URL, status=200,
+        json={"data": {"affected_items": [
+            {"filename": "orphan.xml", "relative_dirname": "etc/rules", "status": "enabled"},
+        ]}},
+    )
+    delete_url = "https://localhost:55000/rules/files/orphan.xml"
+    responses.add(responses.DELETE, delete_url, status=200, json={"error": 0, "total_failed_items": 0})
+
+    assert reconcile_state("TOKEN", _settings("/nonexistent"), False, dry_run=False) is True
+
+    delete_calls = [c for c in responses.calls if c.request.method == "DELETE"]
+    assert len(delete_calls) == 1
+
+
+@responses.activate
+def test_reconcile_state_does_not_log_success_when_delete_body_reports_failure():
+    """DELETE of a file that's already gone (or fails server-side) still returns
+    HTTP 200 (confirmed against a live manager: body 'error': 1, file untouched).
+    reconcile_state must not claim the orphan was deleted when it wasn't."""
+    responses.add(
+        responses.GET, RULES_LIST_URL, status=200,
+        json={"data": {"affected_items": [
+            {"filename": "orphan.xml", "relative_dirname": "etc/rules", "status": "enabled"},
+        ]}},
+    )
+    delete_url = "https://localhost:55000/rules/files/orphan.xml"
+    responses.add(
+        responses.DELETE, delete_url, status=200,
+        json={"error": 1, "total_failed_items": 1,
+              "failed_items": [{"error": {"message": "File does not exist"}}]},
+    )
+
+    with patch("deploy_rule.logger") as mock_logger:
+        result = reconcile_state("TOKEN", _settings("/nonexistent"), False, dry_run=False)
+
+        success_logs = [c for c in mock_logger.info.call_args_list if "Deleted orphaned rule" in str(c)]
+        assert success_logs == [], "must not log a false success for a delete that failed"
+        assert mock_logger.error.called, "the body-level failure must surface as an error"
+    assert result is False, "a failed delete must report reconciliation failure to main()"
+
+
+# --- Partial-failure reporting: reconcile/agent.conf failures must not exit 0 ----
+
+@responses.activate
+def test_reconcile_state_parses_live_v49_shape_and_spares_protected_files():
+    """Regression for the dead-reconciliation bug: against the full response shape
+    a live v4.9.0 manager actually returns (built-in ruleset/rules files plus
+    etc/rules customs), reconcile must see ONLY the etc/rules customs, ignore
+    local_rules.xml and the bundle itself, and delete just the true orphan.
+    The old 'path'-based parse returned an empty remote set here -- no orphan
+    would ever have been detected."""
+    responses.add(
+        responses.GET, RULES_LIST_URL, status=200,
+        json={"data": {"affected_items": [
+            {"filename": "0010-rules_config.xml", "relative_dirname": "ruleset/rules", "status": "enabled"},
+            {"filename": "0015-ossec_rules.xml", "relative_dirname": "ruleset/rules", "status": "enabled"},
+            {"filename": "local_rules.xml", "relative_dirname": "etc/rules", "status": "enabled"},
+            {"filename": "sigma_custom_rules.xml", "relative_dirname": "etc/rules", "status": "enabled"},
+            {"filename": "stale_orphan.xml", "relative_dirname": "etc/rules", "status": "enabled"},
+        ], "total_affected_items": 5, "failed_items": [], "total_failed_items": 0},
+            "error": 0},
+    )
+    delete_url = "https://localhost:55000/rules/files/stale_orphan.xml"
+    responses.add(responses.DELETE, delete_url, status=200, json={"error": 0, "total_failed_items": 0})
+
+    assert reconcile_state("TOKEN", _settings("/nonexistent"), False, dry_run=False) is True
+
+    delete_calls = [c for c in responses.calls if c.request.method == "DELETE"]
+    assert len(delete_calls) == 1
+    assert delete_calls[0].request.url == delete_url
+
+
+@responses.activate
+def test_reconcile_state_parses_legacy_path_shape():
+    """The pre-4.9 'path'/'file' keys are kept as a fallback; a response using
+    them must still be parsed rather than treated as an empty remote state."""
+    responses.add(
+        responses.GET, RULES_LIST_URL, status=200,
+        json={"data": {"affected_items": [
+            {"file": "orphan.xml", "path": "etc/rules/orphan.xml"},
+        ]}},
+    )
+    delete_url = "https://localhost:55000/rules/files/orphan.xml"
+    responses.add(responses.DELETE, delete_url, status=200, json={"error": 0, "total_failed_items": 0})
+
+    assert reconcile_state("TOKEN", _settings("/nonexistent"), False, dry_run=False) is True
+    assert len([c for c in responses.calls if c.request.method == "DELETE"]) == 1
+
+
+@responses.activate
+def test_reconcile_state_returns_false_when_remote_listing_fails():
+    """If the remote rule listing can't even be read, reconciliation didn't happen --
+    the deploy must not be reported as a clean success."""
+    responses.add(responses.GET, RULES_LIST_URL, status=403)
+
+    assert reconcile_state("TOKEN", _settings("/nonexistent"), False, dry_run=False) is False
+
+
+@responses.activate
+def test_deploy_agent_conf_returns_false_on_api_error(tmp_path):
+    """An agent.conf push that fails server-side must surface as a failed step,
+    not a log line the pipeline scrolls past while exiting 0."""
+    conf = tmp_path / "agent.conf"
+    conf.write_text("<agent_config/>")
+    settings = Settings(wazuh_user="u", wazuh_password="p", agent_conf_path=str(conf))
+
+    conf_url = "https://localhost:55000/groups/default/configuration"
+    responses.add(responses.PUT, conf_url, status=400)
+
+    assert deploy_agent_conf("TOKEN", settings, False, dry_run=False) is False
+
+
+@responses.activate
+def test_deploy_agent_conf_returns_false_on_body_level_failure(tmp_path):
+    """Same HTTP-200-but-body-says-error shape as the rules endpoints: a 200 with
+    error:1 in the body means the config was NOT applied."""
+    conf = tmp_path / "agent.conf"
+    conf.write_text("<agent_config/>")
+    settings = Settings(wazuh_user="u", wazuh_password="p", agent_conf_path=str(conf))
+
+    conf_url = "https://localhost:55000/groups/default/configuration"
+    responses.add(responses.PUT, conf_url, status=200, json={"error": 1, "message": "Invalid configuration"})
+
+    assert deploy_agent_conf("TOKEN", settings, False, dry_run=False) is False
+
+
+@responses.activate
+def test_deploy_agent_conf_returns_true_on_success(tmp_path):
+    conf = tmp_path / "agent.conf"
+    conf.write_text("<agent_config/>")
+    settings = Settings(wazuh_user="u", wazuh_password="p", agent_conf_path=str(conf))
+
+    conf_url = "https://localhost:55000/groups/default/configuration"
+    responses.add(responses.PUT, conf_url, status=200, json={"error": 0})
+
+    assert deploy_agent_conf("TOKEN", settings, False, dry_run=False) is True
 
 
 # --- 401 token refresh -----------------------------------------------------------
