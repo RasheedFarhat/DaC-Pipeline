@@ -9,7 +9,7 @@ from unittest.mock import patch
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../scripts')))
 from deploy_rule import (
     safe_api_request, deploy_rules, reconcile_state, deploy_agent_conf,
-    Settings, authed_request, get_token,
+    Settings, authed_request, get_token, get_tls_strategy,
 )
 
 # --- Constants for Testing ---
@@ -54,6 +54,30 @@ def test_get_token_real_deploy_without_credentials_exits_with_clear_error():
     settings = _settings_no_credentials()
     with pytest.raises(SystemExit):
         get_token(settings, tls_verify=True, dry_run=False)
+
+# --- TLS strategy: fail loud on misconfig, tolerate empty env strings -------------
+
+def test_get_tls_strategy_exits_when_ca_bundle_missing():
+    """A configured-but-missing CA bundle must halt the deploy, not silently fall
+    back to the system trust store the operator never chose."""
+    settings = Settings(_env_file=None, wazuh_ca_bundle="/nonexistent/ca.pem")  # type: ignore[call-arg]
+    with pytest.raises(SystemExit):
+        get_tls_strategy(settings)
+
+
+def test_get_tls_strategy_returns_existing_ca_bundle(tmp_path):
+    bundle = tmp_path / "ca.pem"
+    bundle.write_text("dummy pem")
+    settings = Settings(_env_file=None, wazuh_ca_bundle=str(bundle))  # type: ignore[call-arg]
+    assert get_tls_strategy(settings) == str(bundle)
+
+
+def test_empty_verify_tls_string_defaults_to_verify():
+    """An unset GitHub Actions secret arrives as an empty-string env var. That must
+    mean "use the secure default" (verify on), not a bool-parsing ValidationError."""
+    settings = Settings(_env_file=None, wazuh_verify_tls="")  # type: ignore[call-arg]
+    assert settings.wazuh_verify_tls is True
+
 
 @responses.activate
 def test_safe_api_request_success():

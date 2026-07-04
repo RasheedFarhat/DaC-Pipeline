@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import xml.etree.ElementTree as ET
 import yaml
@@ -7,8 +8,24 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
 
-SIGMA_DIR = "rules/sigma"
-BUILD_DIR = "build/wazuh"
+def load_config() -> dict:
+    """Read directory paths from pipeline.yaml, matching compile_sigma.py, so the
+    validator checks the same directories the compiler wrote to."""
+    try:
+        with open("pipeline.yaml", "r") as f:
+            config = yaml.safe_load(f) or {}
+    except FileNotFoundError:
+        logger.warning("pipeline.yaml not found, falling back to defaults.")
+        config = {}
+    build = config.get("build", {})
+    return {
+        "sigma_dir": build.get("sigma_dir", "rules/sigma"),
+        "wazuh_dir": build.get("wazuh_dir", "build/wazuh"),
+    }
+
+CONFIG = load_config()
+SIGMA_DIR = CONFIG["sigma_dir"]
+BUILD_DIR = CONFIG["wazuh_dir"]
 
 def build_has_xml(directory: str) -> bool:
     """Recursively checks if at least one XML file exists in the directory."""
@@ -58,16 +75,18 @@ def validate_pipeline(directories):
         try:
             tree = ET.parse(filepath)
             root = tree.getroot()
+
+            # UUID is stored as an XML comment (<!-- sigma_uuid:UUID -->), which
+            # ElementTree drops, so read the raw text -- once per file, not once
+            # per <rule>. The comment is file-scoped: the compiler writes exactly
+            # one rule per file, so every rule in the file shares it.
+            with open(filepath, 'r') as f:
+                raw = f.read()
+            comment_match = re.search(r'<!--\s*sigma_uuid:([\w-]+)\s*-->', raw)
+            uuid_from_comment = comment_match.group(1) if comment_match else None
+
             for rule in root.findall('.//rule'):
                 rule_id = rule.get('id')
-                # UUID is stored as XML comment: <!-- sigma_uuid:UUID -->
-                import re as _re
-                uuid_from_comment = None
-                with open(filepath, 'r') as _f:
-                    raw = _f.read()
-                comment_match = _re.search(r'<!--\s*sigma_uuid:([\w-]+)\s*-->', raw)
-                if comment_match:
-                    uuid_from_comment = comment_match.group(1)
 
                 if rule_id:
                     try:

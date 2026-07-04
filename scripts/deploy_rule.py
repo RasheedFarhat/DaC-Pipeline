@@ -5,7 +5,7 @@ import logging
 import argparse
 import yaml
 from typing import Any, Dict, Set, Optional, Union, List, Tuple
-from pydantic import Field, ValidationError
+from pydantic import Field, ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception, before_sleep_log
 
@@ -38,6 +38,16 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file='.env', extra='ignore')
 
+    @field_validator("wazuh_verify_tls", mode="before")
+    @classmethod
+    def _empty_string_means_default(cls, v: Any) -> Any:
+        # An unset GitHub Actions secret arrives as an empty-string env var.
+        # Treat "" as "not configured" and keep the secure default (verify=True)
+        # instead of crashing on a bool-parsing ValidationError.
+        if isinstance(v, str) and v.strip() == "":
+            return True
+        return v
+
 def load_settings() -> Settings:
     config_data: Dict[str, Any] = {}
     try:
@@ -58,7 +68,17 @@ def load_settings() -> Settings:
         sys.exit(1)
 
 def get_tls_strategy(settings: Settings) -> Union[bool, str]:
-    if settings.wazuh_ca_bundle and os.path.exists(settings.wazuh_ca_bundle):
+    if settings.wazuh_ca_bundle:
+        # A configured-but-missing bundle must not silently fall back to the system
+        # trust store: the operator asked for a specific CA, and proceeding without
+        # it either fails confusingly later (self-signed manager) or "works" while
+        # validating against roots the operator never chose.
+        if not os.path.isfile(settings.wazuh_ca_bundle):
+            logger.error(
+                f"CRITICAL: WAZUH_CA_BUNDLE is set but the file does not exist: "
+                f"{settings.wazuh_ca_bundle}"
+            )
+            sys.exit(1)
         return settings.wazuh_ca_bundle
     elif not settings.wazuh_verify_tls:
         import urllib3
