@@ -344,7 +344,8 @@ def main() -> None:
     skipped = 0
     registry_updated = False
 
-    for root_dir, _, files in os.walk(SIGMA_DIR):
+    for root_dir, dirs, files in os.walk(SIGMA_DIR):
+        dirs.sort()
         for filename in sorted(files):
             if not filename.endswith(('.yml', '.yaml')):
                 continue

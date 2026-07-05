@@ -1,51 +1,55 @@
 # Detection-as-Code Pipeline · Sigma → Wazuh
 
+<div align="center">
+
 [![CI Pipeline](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/integrate_rulesets.yml/badge.svg)](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/integrate_rulesets.yml)
 [![gitleaks](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/gitleaks.yml/badge.svg)](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/gitleaks.yml)
 [![CodeQL](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/codeql.yml/badge.svg)](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/codeql.yml)
 [![bandit](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/bandit.yml/badge.svg)](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/bandit.yml)
 [![pip-audit](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/pip-audit.yml/badge.svg)](https://github.com/RasheedFarhat/DaC-Pipeline/actions/workflows/pip-audit.yml)
+
 ![Python](https://img.shields.io/badge/Python-3.11+-yellow?logo=python)
 ![SIEM](https://img.shields.io/badge/SIEM-Wazuh_v4.9-00AEEF)
-![Tests](https://img.shields.io/badge/tests-85_passing-success)
-![License](https://img.shields.io/badge/License-MIT-success)
+![Tests](https://img.shields.io/badge/tests-87_passing-success)
+[![License](https://img.shields.io/badge/License-MIT-success)](LICENSE)
 
-Author a threat detection **once** in [Sigma](https://github.com/SigmaHQ/sigma) YAML; a
-custom compiler translates it into native [Wazuh](https://wazuh.com/) PCRE2 XML, CI
-validates and ID-stabilizes it, and CD deploys it to a live Wazuh manager — every change
-peer-reviewed, unit-tested, and mapped to MITRE ATT&CK.
+</div>
 
-> **Why this is more than a script:** No official `pysigma-backend-wazuh` exists on PyPI,
-> so `scripts/compile_sigma.py` is a **from-scratch compiler**. It walks the Sigma
-> detection AST, distributes it into disjunctive normal form (capped at 500 DNF clauses —
-> `MAX_AND_CLAUSE_PRODUCT` — so a pathologically OR-heavy rule fails the build loudly
-> instead of hanging or exhausting memory), applies **De Morgan's law** to negations,
-> merges same-field literals into Wazuh PCRE2 (lookahead conjunction for positives,
-> alternation for negatives), emits case-insensitive `(?i)` matches to mirror Sigma
-> semantics, and resolves Sigma field names through an external `field_mappings.yaml`
-> — covered by 85 unit tests. For a stage-by-stage trace of how one real rule becomes
-> Wazuh PCRE2 XML — AST, DNF, De Morgan, the PCRE2 merge, and the honest scope limits —
-> see [`docs/COMPILER.md`](docs/COMPILER.md).
+Write a threat detection once, in [Sigma](https://github.com/SigmaHQ/sigma) YAML.
+A custom compiler translates it into native [Wazuh](https://wazuh.com/) PCRE2 XML,
+CI validates it and pins its rule IDs, and CD deploys it to a live Wazuh manager.
+Every change goes through a pull request with tests and a deployment dry-run.
+
+> **Why this is more than a script:** there is no official `pysigma-backend-wazuh`
+> on PyPI, so `scripts/compile_sigma.py` is a from-scratch compiler. It walks the
+> Sigma detection AST and distributes it into disjunctive normal form, capped at
+> 500 clauses (`MAX_AND_CLAUSE_PRODUCT`) so a pathologically OR-heavy rule fails
+> the build instead of hanging or exhausting memory. It applies De Morgan's law
+> to negations, merges same-field literals into single PCRE2 patterns (lookahead
+> conjunction for positives, alternation for negatives), emits `(?i)` to mirror
+> Sigma's case-insensitive semantics, and resolves field names through
+> `field_mappings.yaml`. 87 unit tests cover it. For a stage-by-stage trace of
+> one real rule — AST, DNF, De Morgan, the PCRE2 merge, and the honest scope
+> limits — see [`docs/COMPILER.md`](docs/COMPILER.md).
 >
 > A companion tool, [`scripts/sigmahq_coverage.py`](scripts/sigmahq_coverage.py), measures
 > how much of the upstream [SigmaHQ](https://github.com/SigmaHQ/sigma) ruleset this
-> compiler already handles — see [Importing from SigmaHQ](#importing-from-sigmahq) below.
+> compiler already handles. See [Importing from SigmaHQ](#importing-from-sigmahq) below.
 
 ## 30-second tour
 
 ```bash
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-make all        # clean → compile Sigma → validate IDs → run tests (85 passing)
+make all        # clean → compile Sigma → validate IDs → run tests (87 passing)
 ```
 
-`make all` compiles the current **58** Sigma rules (3 hand-authored examples + 55 imported
-from SigmaHQ) into **216** Wazuh rules — some rules fan out to multiple Wazuh IDs via DNF
-distribution (`sysmon_wmic_xsl_bypass.yml` alone compiles to 12) — validates every ID and
-Sigma↔Wazuh UUID link, and runs the suite. Detection coverage currently spans **119
-distinct MITRE ATT&CK techniques across all 14 tactics**; see
-[`docs/COVERAGE.md`](docs/COVERAGE.md) for the full per-rule breakdown against the pinned
-upstream SigmaHQ ref.
+`make all` compiles the current **58** Sigma rules (3 hand-authored + 55 imported from
+SigmaHQ) into **216** Wazuh rules, validates every ID and Sigma↔Wazuh UUID link, and runs
+the test suite. Some rules fan out to multiple Wazuh IDs via DNF distribution:
+`sysmon_wmic_xsl_bypass.yml` alone compiles to 12. Coverage spans **119 distinct MITRE
+ATT&CK techniques across all 14 tactics**; see [`docs/COVERAGE.md`](docs/COVERAGE.md) for
+the full per-rule breakdown against the pinned upstream SigmaHQ ref.
 
 ## Architecture
 
@@ -153,10 +157,10 @@ make install-hooks                                  # pre-push: tests + compile 
 ### Validate and build locally
 
 ```bash
-python scripts/validate_sigma.py   # Sigma syntax (sigma-cli)
+python scripts/validate_sigma.py   # Sigma syntax (sigma-cli) + backend compilability
 python scripts/compile_sigma.py    # Sigma → build/wazuh/*.xml
 python scripts/check_rule_ids.py   # ID conventions + Sigma↔Wazuh linkage
-pytest -v tests/                   # 85 tests covering compiler + deploy + coverage tool
+pytest -v tests/                   # 87 tests covering compiler + deploy + coverage tool
 # or simply:  make all
 ```
 
@@ -249,14 +253,14 @@ For CI/CD, add the variables as repository secrets under
 
 ## Security
 
-Every change is gated by automated security scanning — each its own CI check — and all
+Every change is gated by automated security scanning, run as its own CI check, and all
 GitHub Actions are pinned to immutable commit SHAs (not floating tags):
 
-- **gitleaks** — full-history secret scanning, so a committed credential is caught on the PR
+- **gitleaks**: full-history secret scanning, so a committed credential is caught on the PR
   that introduces it.
-- **CodeQL** and **bandit** — Python static analysis (SAST).
-- **pip-audit** — dependency CVE scanning of `requirements.txt`.
-- **Dependabot** — weekly dependency and action updates, with minor/patch bumps grouped.
+- **CodeQL** and **bandit**: Python static analysis (SAST).
+- **pip-audit**: dependency CVE scanning of `requirements.txt`.
+- **Dependabot**: weekly dependency and action updates, with minor/patch bumps grouped.
   Direct dependencies are tracked via `requirements.in`; `requirements.txt` is the
   `pip-compile`-generated lock, so transitive pins don't generate their own PRs.
 
@@ -268,9 +272,11 @@ for the vulnerability-disclosure policy and credential handling; and
 
 ## Design decisions & known limitations
 
-- **No pySigma Wazuh backend exists**, so Sigma rules are *validated for compilability*
-  using `pysigma-backend-elasticsearch`, while the Wazuh XML is generated by the custom AST
-  walker in `compile_sigma.py`. This is the project's core, not a workaround.
+- **No pySigma Wazuh backend exists**, so `validate_sigma.py` proves each rule is
+  compilable by converting it through `pysigma-backend-elasticsearch` (Lucene +
+  sysmon pipeline) and discarding the output, while the Wazuh XML that actually
+  ships is generated by the custom AST walker in `compile_sigma.py`. This is the
+  project's core, not a workaround.
 - **The remote reconcile diff is validated against a live Wazuh v4.9.0 manager**
   (2026-07-04). The risk this section used to document — "if the API response shape
   differs, it silently treats all rules as new" — turned out to be **real**: the original
