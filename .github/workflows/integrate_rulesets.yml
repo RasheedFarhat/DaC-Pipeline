@@ -9,8 +9,16 @@ on:
       - 'scripts/**.py'
       - 'templates/**.j2'
       - 'pipeline.yaml'
+      - 'field_mappings.yaml'
+      - 'id_registry.json'
+      - 'requirements.txt'
+      - 'tests/**'
+      - '.github/workflows/integrate_rulesets.yml'
   pull_request:
     branches: [ main, dev ]
+
+permissions:
+  contents: read
 
 jobs:
   build-and-test:

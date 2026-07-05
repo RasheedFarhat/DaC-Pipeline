@@ -6,8 +6,8 @@
 # --- Compile & validate Sigma -------------------------------------------------
 pySigma==1.4.0
 sigma-cli==3.0.2
-pySigma-backend-elasticsearch==2.1.0   # proves Sigma compilability in CI
-pysigma-pipeline-sysmon==2.0.0
+pySigma-backend-elasticsearch==2.1.0   # backend compilability check, scripts/validate_sigma.py
+pysigma-pipeline-sysmon==2.0.0         # field pipeline for that same check
 Jinja2==3.1.6                          # Wazuh XML template rendering
 PyYAML==6.0.3
 
