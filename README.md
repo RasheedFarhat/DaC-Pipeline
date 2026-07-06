@@ -39,7 +39,7 @@ Every change goes through a pull request with tests and a deployment dry-run.
 ## 30-second tour
 
 ```bash
-python3 -m venv venv && source venv/bin/activate
+python3 -m venv venv && source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 make all        # clean → compile Sigma → validate IDs → run tests (87 passing)
 ```
@@ -160,8 +160,9 @@ make install-hooks                                  # pre-push: tests + compile 
 python scripts/validate_sigma.py   # Sigma syntax (sigma-cli) + backend compilability
 python scripts/compile_sigma.py    # Sigma → build/wazuh/*.xml
 python scripts/check_rule_ids.py   # ID conventions + Sigma↔Wazuh linkage
-pytest -v tests/                   # 87 tests covering compiler + deploy + coverage tool
-# or simply:  make all
+python -m pytest -v tests/         # 87 tests covering compiler + deploy + coverage tool
+# or simply:  make all             # Linux/macOS convenience wrapper; the explicit
+                                    # commands above are the portable path (no `make` on Windows by default)
 ```
 
 All steps exit non-zero on failure. The same checks run in CI on every pull request and
