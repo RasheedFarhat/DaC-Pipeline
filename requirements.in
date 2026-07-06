@@ -5,7 +5,7 @@
 
 # --- Compile & validate Sigma -------------------------------------------------
 pySigma==1.4.0
-sigma-cli==3.0.2
+sigma-cli==3.0.3
 pySigma-backend-elasticsearch==2.1.0   # backend compilability check, scripts/validate_sigma.py
 pysigma-pipeline-sysmon==2.0.0         # field pipeline for that same check
 Jinja2==3.1.6                          # Wazuh XML template rendering
@@ -20,7 +20,7 @@ tenacity==9.1.4                        # retry/backoff on transient API failures
 
 # --- Dev / test / lint --------------------------------------------------------
 pytest==9.1.1
-responses==0.26.1                      # mock Wazuh API in tests
+responses==0.26.2                      # mock Wazuh API in tests
 pre-commit==4.6.0
 mypy==2.1.0
 types-requests==2.33.0.20260518

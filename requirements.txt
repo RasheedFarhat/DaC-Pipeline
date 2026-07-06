@@ -108,9 +108,9 @@ requests==2.34.2
     #   -r requirements.in
     #   pysigma
     #   responses
-responses==0.26.1
+responses==0.26.2
     # via -r requirements.in
-sigma-cli==3.0.2
+sigma-cli==3.0.3
     # via -r requirements.in
 tenacity==9.1.4
     # via -r requirements.in
