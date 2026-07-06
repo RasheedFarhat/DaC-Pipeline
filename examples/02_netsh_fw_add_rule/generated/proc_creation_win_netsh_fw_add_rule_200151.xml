@@ -1,0 +1,13 @@
+<group name="windows, custom_sigma">
+  <rule id="200151" level="7">
+    <!-- sigma_uuid:cd5cfd80-aa5f-44c0-9c20-108c4ae12e3c -->
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.originalFileName" type="pcre2">(?i)^netsh\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?=.*(?i).*\ firewall\ .*)(?=.*(?i).*\ add\ .*)</field>
+    <field name="win.eventdata.commandLine" type="pcre2" negate="yes">(?:(?i).*advfirewall\ firewall\ add\ rule\ name=Dropbox\ dir=in\ action=allow\ &#34;program=.:\\Program\ Files\ \(x86\)\\Dropbox\\Client\\Dropbox\.exe&#34;\ enable=yes\ profile=Any.*)|(?:(?i).*advfirewall\ firewall\ add\ rule\ name=Dropbox\ dir=in\ action=allow\ &#34;program=.:\\Program\ Files\\Dropbox\\Client\\Dropbox\.exe&#34;\ enable=yes\ profile=Any.*)</field>
+    <description>New Firewall Rule Added Via Netsh.EXE (Part 2)</description>
+    <mitre>
+      <id>T1562.004</id>
+    </mitre>
+  </rule>
+</group>

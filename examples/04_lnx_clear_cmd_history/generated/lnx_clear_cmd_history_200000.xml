@@ -1,0 +1,11 @@
+<group name="linux, syscheck, custom_sigma">
+  <rule id="200000" level="10">
+    <!-- sigma_uuid:e069b008-0114-41d6-84d4-4efb60fc14c0 -->
+    <if_group>syscheck</if_group>
+    <field name="syscheck.path" type="pcre2">(?i).*\.bash_history$</field>
+    <description>Linux Command History Cleared</description>
+    <mitre>
+      <id>T1070.003</id>
+    </mitre>
+  </rule>
+</group>
