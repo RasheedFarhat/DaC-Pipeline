@@ -139,6 +139,10 @@ The remaining 55 rules are curated imports from SigmaHQ — see
 [Importing from SigmaHQ](#importing-from-sigmahq) below and
 [`docs/COVERAGE.md`](docs/COVERAGE.md) for the full catalog.
 
+Want to see actual compiler output — the Wazuh XML, `<if_group>` parent selection, and the
+DNF fan-out — without cloning or deploying anything? See [`examples/`](examples/): four
+Sigma → Wazuh pairs with the real generated XML committed alongside the source rule.
+
 ## Prerequisites
 
 - Python 3.11+

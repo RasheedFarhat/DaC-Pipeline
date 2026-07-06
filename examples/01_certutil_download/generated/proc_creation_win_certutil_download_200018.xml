@@ -1,0 +1,13 @@
+<group name="windows, custom_sigma">
+  <rule id="200018" level="7">
+    <!-- sigma_uuid:19b08b1c-861d-4e75-a1ef-ea0c1baf202b -->
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.image" type="pcre2">(?i).*\\certutil\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?=.*(?i).*verifyctl\ .*)(?=.*(?i).*http.*)</field>
+    <description>Suspicious Download Via Certutil.EXE (Part 2)</description>
+    <mitre>
+      <id>T1027</id>
+      <id>T1105</id>
+    </mitre>
+  </rule>
+</group>
