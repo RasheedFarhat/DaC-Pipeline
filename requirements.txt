@@ -6,7 +6,7 @@
 #
 annotated-types==0.7.0
     # via pydantic
-ast-serialize==0.5.0
+ast-serialize==0.6.0
     # via mypy
 certifi==2026.5.20
     # via requests
@@ -40,11 +40,11 @@ jinja2==3.1.6
     #   pysigma
 jq==1.11.0
     # via pysigma
-librt==0.11.0
+librt==0.13.0
     # via mypy
 markupsafe==3.0.3
     # via jinja2
-mypy==2.1.0
+mypy==2.3.0
     # via -r requirements.in
 mypy-extensions==1.1.0
     # via mypy
@@ -108,9 +108,9 @@ requests==2.34.2
     #   -r requirements.in
     #   pysigma
     #   responses
-responses==0.26.1
+responses==0.26.2
     # via -r requirements.in
-sigma-cli==3.0.2
+sigma-cli==3.1.0
     # via -r requirements.in
 tenacity==9.1.4
     # via -r requirements.in
